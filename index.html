@@ -1033,6 +1033,12 @@
           <label for="prodotto-max-pezzi">Max pezzi a persona (AYCE)</label>
           <input type="number" id="prodotto-max-pezzi" step="1" min="1" placeholder="vuoto = nessun limite" title="All you can eat: massimo pezzi di questo piatto per comanda, a persona">
         </div>
+        <div style="grid-column: 1 / -1;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="prodotto-non-stampare" style="width:auto; margin:0;">
+            Non stampare in comanda <span style="opacity:.7; font-weight:400;">(va solo sul tavolo di Geri)</span>
+          </label>
+        </div>
         <div>
           <label for="prodotto-ordine">Ordine</label>
           <input type="number" id="prodotto-ordine" value="0">
@@ -2472,6 +2478,7 @@ const ICONE_CATEGORIA_BASE64 = {
     document.getElementById('prodotto-prezzo').value = p.prezzo_base;
     document.getElementById('prodotto-codice-geri').value = p.codice_geri ?? '';
     document.getElementById('prodotto-max-pezzi').value = p.max_pezzi_persona ?? '';
+    document.getElementById('prodotto-non-stampare').checked = !!p.non_stampare;
     document.getElementById('prodotto-ordine').value = p.ordine_visualizzazione;
     document.getElementById('prodotto-attivo').checked = p.attivo;
     document.getElementById('prodotto-novita').checked = !!p.novita;
@@ -2658,6 +2665,7 @@ const ICONE_CATEGORIA_BASE64 = {
         prezzo_base: parseFloat(document.getElementById('prodotto-prezzo').value) || 0,
         codice_geri: parseInt(document.getElementById('prodotto-codice-geri').value) || null,
         max_pezzi_persona: parseInt(document.getElementById('prodotto-max-pezzi').value) || null,
+        non_stampare: document.getElementById('prodotto-non-stampare').checked,
         ordine_visualizzazione: parseInt(document.getElementById('prodotto-ordine').value) || 0,
         attivo: document.getElementById('prodotto-attivo').checked,
         novita: document.getElementById('prodotto-novita').checked,
