@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Ordina al tavolo</title>
+<meta name="theme-color" content="#33421f">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7eecb; --panel: #fffdf5; --panel-2: #f0e6bd; --ink: #2f3a20; --ink-dim: #6d7a58;
+    --accent: #e2604f; --accent-ink: #fff; --verde: #33421f; --error: #c0392b; --ok: #4f7a3a;
+    --border: #e6d9a2; --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+  body { min-height: 100vh; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  h1, h2, h3 { margin: 0; font-family: 'Baloo 2', 'Segoe UI', sans-serif; line-height: 1.15; }
+  button { font: inherit; cursor: pointer; border: 0; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  .hidden { display: none !important; }
+
+  /* testata */
+  header.top { background: var(--verde); color: #fff; padding: calc(14px + env(safe-area-inset-top)) 0 14px; position: sticky; top: 0; z-index: 20; }
+  header.top .wrap { display: flex; align-items: center; gap: 12px; }
+  header.top img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; background: #fff; }
+  header.top h1 { font-size: 20px; }
+  header.top .sub { font-size: 13px; opacity: .85; }
+  .badge-tavolo { margin-left: auto; background: var(--accent); color: #fff; border-radius: 12px; padding: 6px 12px; text-align: center; font-family: 'Baloo 2'; line-height: 1; }
+  .badge-tavolo small { display: block; font-size: 11px; font-family: 'Segoe UI', sans-serif; opacity: .9; }
+  .badge-tavolo b { font-size: 24px; }
+
+  /* schermata apertura */
+  .card { background: var(--panel); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 16px; }
+  .card h2 { font-size: 20px; margin-bottom: 4px; }
+  .muted { color: var(--ink-dim); font-size: 14px; }
+  .persone { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed var(--border); }
+  .persone:last-child { border-bottom: 0; }
+  .persone .nome { font-weight: 700; font-size: 16px; }
+  .stepper { display: flex; align-items: center; gap: 4px; }
+  .stepper button { width: 40px; height: 40px; border-radius: 50%; background: var(--panel-2); color: var(--verde); font-size: 22px; font-weight: 700; display: grid; place-items: center; }
+  .stepper button:disabled { opacity: .35; }
+  .stepper span { min-width: 34px; text-align: center; font-size: 20px; font-weight: 800; font-family: 'Baloo 2'; }
+  .menu-scelta { display: block; width: 100%; text-align: left; background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-top: 10px; color: var(--ink); }
+  .menu-scelta.sel { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(226,96,79,.15); }
+  .menu-scelta .t { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .menu-scelta .t b { font-family: 'Baloo 2'; font-size: 18px; }
+  .menu-scelta .p { font-weight: 800; color: var(--accent); white-space: nowrap; }
+  .menu-scelta .d { font-size: 13px; color: var(--ink-dim); margin-top: 4px; }
+  .btn { display: block; width: 100%; padding: 15px; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 800; font-size: 17px; margin-top: 18px; }
+  .btn:disabled { opacity: .5; }
+  .btn.sec { background: var(--panel-2); color: var(--verde); }
+  .totale-apertura { margin-top: 14px; font-size: 15px; text-align: right; }
+
+  /* barra stato comanda */
+  .stato { margin-top: 12px; border-radius: 12px; padding: 10px 14px; font-size: 14px; display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1.5px solid var(--border); }
+  .stato.attesa { background: #fff4e5; border-color: #f0c88a; }
+  .stato b { font-family: 'Baloo 2'; font-size: 18px; }
+  .tabs-viste { display: flex; gap: 8px; margin-top: 12px; }
+  .tabs-viste button { flex: 1; padding: 10px; border-radius: 10px; background: var(--panel-2); color: var(--verde); font-weight: 700; }
+  .tabs-viste button.on { background: var(--verde); color: #fff; }
+
+  /* categorie */
+  nav.cat { position: sticky; top: calc(68px + env(safe-area-inset-top)); z-index: 10; background: var(--bg); padding: 10px 0 8px; margin: 0 -16px; }
+  nav.cat .scroll { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; }
+  nav.cat .scroll::-webkit-scrollbar { display: none; }
+  nav.cat button { white-space: nowrap; padding: 8px 14px; border-radius: 99px; background: var(--panel); border: 1.5px solid var(--border); color: var(--ink); font-weight: 600; font-size: 14px; }
+  nav.cat button.on { background: var(--verde); border-color: var(--verde); color: #fff; }
+  section.categoria h3 { font-size: 21px; margin: 18px 0 8px; scroll-margin-top: 130px; }
+
+  .prodotto { display: flex; gap: 12px; background: var(--panel); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 10px; margin-bottom: 10px; align-items: center; }
+  .prodotto img { width: 76px; height: 76px; border-radius: 10px; object-fit: cover; flex: none; background: var(--panel-2); }
+  .prodotto .info { flex: 1; min-width: 0; }
+  .prodotto .nome { font-weight: 700; font-size: 15.5px; }
+  .prodotto .desc { font-size: 12.5px; color: var(--ink-dim); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .prodotto .riga-prezzo { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+  .prezzo { font-weight: 800; color: var(--accent); }
+  .incluso { font-size: 12px; font-weight: 700; color: var(--ok); background: #e7f0de; padding: 2px 8px; border-radius: 99px; }
+  .limite { font-size: 11.5px; color: var(--ink-dim); }
+  .agg { flex: none; }
+  .agg .piu { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 24px; font-weight: 700; display: grid; place-items: center; }
+  .agg .stepper button { width: 34px; height: 34px; font-size: 19px; }
+  .agg .stepper span { min-width: 24px; font-size: 17px; }
+
+  /* barra carrello */
+  .barra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 70%, transparent); }
+  .barra button { max-width: 608px; margin: 0 auto; display: flex; width: 100%; align-items: center; justify-content: space-between; background: var(--verde); color: #fff; border-radius: 14px; padding: 14px 18px; font-weight: 700; font-size: 16px; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+  .barra .n { background: var(--accent); border-radius: 99px; padding: 2px 10px; margin-right: 8px; }
+
+  /* fogli dal basso */
+  .velo { position: fixed; inset: 0; background: rgba(20,24,12,.45); z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
+  .foglio { background: var(--panel); width: 100%; max-width: 640px; max-height: 88vh; border-radius: 20px 20px 0 0; display: flex; flex-direction: column; }
+  .foglio .testa { padding: 16px 18px 10px; display: flex; gap: 10px; align-items: flex-start; border-bottom: 1px solid var(--border); }
+  .foglio .testa h2 { font-size: 21px; flex: 1; }
+  .foglio .chiudi { background: var(--panel-2); color: var(--verde); width: 34px; height: 34px; border-radius: 50%; font-size: 18px; flex: none; }
+  .foglio .corpo { padding: 6px 18px 12px; overflow-y: auto; }
+  .foglio .piede { padding: 12px 18px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
+  .foglio .piede .btn { margin-top: 0; }
+  .gruppo { margin-top: 14px; }
+  .gruppo .gt { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; font-family: 'Baloo 2'; font-size: 17px; }
+  .gruppo .gt small { font-family: 'Segoe UI'; font-weight: 600; font-size: 12px; color: var(--ink-dim); }
+  .gruppo .gt small.ko { color: var(--error); }
+  .opz { display: flex; align-items: center; gap: 10px; padding: 11px 2px; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .opz input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+  .opz .pz { margin-left: auto; font-size: 13px; color: var(--ink-dim); }
+  .riga-carr { display: flex; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .riga-carr .info { flex: 1; min-width: 0; }
+  .riga-carr .nome { font-weight: 700; }
+  .riga-carr .opz-txt { font-size: 12.5px; color: var(--ink-dim); }
+  .riepilogo-limiti { font-size: 13px; color: var(--ink-dim); margin: 10px 0 2px; }
+  .avviso { background: #fdecea; color: var(--error); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-top: 10px; }
+
+  .comanda-storico { background: var(--panel); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-top: 12px; }
+  .comanda-storico .t { display: flex; justify-content: space-between; font-weight: 800; font-family: 'Baloo 2'; font-size: 17px; }
+  .comanda-storico ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
+  .comanda-storico li small { color: var(--ink-dim); }
+  .vuoto { text-align: center; color: var(--ink-dim); padding: 40px 10px; }
+  .toast { position: fixed; left: 50%; top: calc(84px + env(safe-area-inset-top)); transform: translateX(-50%); background: var(--ok); color: #fff; padding: 12px 18px; border-radius: 12px; z-index: 60; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,.2); max-width: 92vw; text-align: center; }
+  .toast.ko { background: var(--error); }
+  .caricamento { padding: 80px 0; text-align: center; color: var(--ink-dim); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <img id="logo" alt="" class="hidden">
+    <div><h1 id="nome-locale">Ordina al tavolo</h1><div class="sub" id="sub-testata"></div></div>
+    <div class="badge-tavolo"><small>Tavolo</small><b id="num-tavolo">–</b></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="v-caricamento" class="caricamento">Caricamento…</div>
+  <div id="v-errore" class="hidden"><div class="card"><h2>Ops</h2><p class="muted" id="testo-errore"></p><button class="btn sec" onclick="location.reload()">Riprova</button></div></div>
+
+  <!-- 1. Apertura tavolo: persone e menu -->
+  <div id="v-apertura" class="hidden">
+    <div class="card">
+      <h2>Benvenuti!</h2>
+      <p class="muted" style="margin:0">Quante persone siete al tavolo?</p>
+      <div class="persone"><span class="nome">Adulti</span><div class="stepper"><button data-p="adulti" data-d="-1">−</button><span id="n-adulti">2</span><button data-p="adulti" data-d="1">+</button></div></div>
+      <div class="persone"><span class="nome">Bambini</span><div class="stepper"><button data-p="bambini" data-d="-1">−</button><span id="n-bambini">0</span><button data-p="bambini" data-d="1">+</button></div></div>
+    </div>
+    <div class="card">
+      <h2>Scegli il menu</h2>
+      <div id="lista-menu"></div>
+      <div class="totale-apertura" id="totale-apertura"></div>
+      <button class="btn" id="btn-inizia" disabled>Inizia a ordinare</button>
+    </div>
+  </div>
+
+  <!-- 2. Ordinazione -->
+  <div id="v-menu" class="hidden">
+    <div class="stato" id="stato-comanda"></div>
+    <div class="tabs-viste"><button class="on" data-vista="ordina">Menu</button><button data-vista="comande">Le comande <span id="n-comande"></span></button></div>
+    <div id="sotto-ordina">
+      <nav class="cat"><div class="scroll" id="tabs-cat"></div></nav>
+      <div id="lista-prodotti"></div>
+    </div>
+    <div id="sotto-comande" class="hidden"></div>
+  </div>
+</main>
+
+<div class="barra hidden" id="barra"><button id="btn-carrello"><span><span class="n" id="barra-n">0</span>La tua comanda</span><span id="barra-txt">Vedi e invia ›</span></button></div>
+
+<div class="velo hidden" id="velo-prodotto"><div class="foglio">
+  <div class="testa"><h2 id="fp-nome"></h2><button class="chiudi" data-chiudi>✕</button></div>
+  <div class="corpo" id="fp-corpo"></div>
+  <div class="piede"><div style="display:flex;gap:12px;align-items:center"><div class="stepper"><button id="fp-meno">−</button><span id="fp-q">1</span><button id="fp-piu">+</button></div><button class="btn" id="fp-aggiungi" style="flex:1">Aggiungi</button></div></div>
+</div></div>
+
+<div class="velo hidden" id="velo-carrello"><div class="foglio">
+  <div class="testa"><h2>La tua comanda</h2><button class="chiudi" data-chiudi>✕</button></div>
+  <div class="corpo" id="carr-corpo"></div>
+  <div class="piede"><div id="carr-avviso"></div><button class="btn" id="btn-invia">Invia comanda</button></div>
+</div></div>
+
+<script>
+// ================= CONFIGURAZIONE =================
+const SUPABASE_URL = 'https://tsgxnsvwglhebgelwaxn.supabase.co'; // <-- URL del NUOVO progetto Supabase
+const SUPABASE_ANON_KEY = 'sb_publishable_RP3UQhYxOMGRHwHFssJstw_2nILJvrG';           // <-- Publishable/anon key del nuovo progetto
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+const qs = new URLSearchParams(location.search);
+const TENANT = qs.get('tenant');
+const TAVOLO = parseInt(qs.get('tavolo'), 10);
+const $ = id => document.getElementById(id);
+const euro = n => '€' + Number(n || 0).toFixed(2).replace('.', ',');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+let info = null;            // risposta di tavolo_info
+let catalogo = null;        // { categorie, prodotti }
+let menuCorrente = null;    // menu della sessione
+let carrello = [];          // [{ chiave, prodotto_id, nome, quantita, opzioni:[{id,nome,gruppo,prezzo}] }]
+let persone = { adulti: 2, bambini: 0 };
+let menuScelto = null;
+let timerConto = null;
+
+// ---------- utilità ----------
+function mostra(vista) {
+  ['v-caricamento', 'v-errore', 'v-apertura', 'v-menu'].forEach(v => $(v).classList.toggle('hidden', v !== vista));
+  $('barra').classList.toggle('hidden', vista !== 'v-menu' || !carrello.length);
+}
+function errore(msg) { $('testo-errore').textContent = msg; mostra('v-errore'); }
+function toast(msg, ko) {
+  document.querySelectorAll('.toast').forEach(x => x.remove());
+  const t = document.createElement('div'); t.className = 'toast' + (ko ? ' ko' : ''); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), ko ? 4500 : 2800);
+}
+function apri(id) { $(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+function chiudi(id) { $(id).classList.add('hidden'); document.body.style.overflow = ''; }
+document.querySelectorAll('[data-chiudi]').forEach(b => b.onclick = () => chiudi(b.closest('.velo').id));
+document.querySelectorAll('.velo').forEach(v => v.addEventListener('click', e => { if (e.target === v) chiudi(v.id); }));
+function messaggioErrore(e) { return (e && (e.message || e.msg)) || 'Errore di connessione, riprova'; }
+
+// il carrello resta sul telefono se si chiude la pagina per sbaglio (solo comodità)
+const CHIAVE_CARRELLO = () => `tavolo_carrello_${TENANT}_${TAVOLO}_${info && info.sessione ? info.sessione.id : ''}`;
+function salvaCarrello() { try { localStorage.setItem(CHIAVE_CARRELLO(), JSON.stringify(carrello)); } catch (_) {} }
+function caricaCarrello() { try { carrello = JSON.parse(localStorage.getItem(CHIAVE_CARRELLO()) || '[]'); } catch (_) { carrello = []; } }
+
+// ---------- dati ----------
+async function rpc(nome, args) {
+  const { data, error } = await sb.rpc(nome, args);
+  if (error) throw error;
+  return data;
+}
+async function caricaInfo() {
+  info = await rpc('tavolo_info', { p_tenant: TENANT, p_tavolo: TAVOLO });
+  return info;
+}
+async function caricaLocale() {
+  const { data } = await sb.from('impostazioni_locale').select('nome_locale, logo_url').eq('tenant_id', TENANT).maybeSingle();
+  if (data) {
+    if (data.nome_locale) { $('nome-locale').textContent = data.nome_locale; document.title = data.nome_locale + ' — Tavolo ' + TAVOLO; }
+    if (data.logo_url) { $('logo').src = data.logo_url; $('logo').classList.remove('hidden'); }
+  }
+}
+async function caricaCatalogo() {
+  if (catalogo) return catalogo;
+  const [cat, prod] = await Promise.all([
+    sb.from('categorie').select('id, nome, ordine_visualizzazione, categoria_collegata_id').eq('tenant_id', TENANT).eq('attivo', true).order('ordine_visualizzazione'),
+    sb.from('prodotti').select('id, nome, descrizione, prezzo_base, immagine_url, categoria_id, ordine_visualizzazione, max_pezzi_persona, ' +
+      'prodotti_opzioni_variazione(opzioni_variazione(id, nome, prezzo_aggiuntivo, variazioni(id, nome_gruppo, obbligatorio, min_scelte, max_scelte, tipo, ordine_visualizzazione)))')
+      .eq('tenant_id', TENANT).eq('attivo', true).order('ordine_visualizzazione'),
+  ]);
+  if (cat.error) throw cat.error;
+  if (prod.error) throw prod.error;
+  // gruppi di varianti per prodotto
+  for (const p of prod.data) {
+    const gruppi = new Map();
+    for (const l of p.prodotti_opzioni_variazione || []) {
+      const o = l.opzioni_variazione; if (!o || !o.variazioni) continue;
+      const g = o.variazioni;
+      if (!gruppi.has(g.id)) gruppi.set(g.id, { ...g, opzioni: [] });
+      gruppi.get(g.id).opzioni.push({ id: o.id, nome: o.nome, prezzo: Number(o.prezzo_aggiuntivo) || 0 });
+    }
+    p.gruppi = [...gruppi.values()].sort((a, b) => (a.ordine_visualizzazione || 0) - (b.ordine_visualizzazione || 0));
+    p.gruppi.forEach(g => g.opzioni.sort((a, b) => a.nome.localeCompare(b.nome)));
+  }
+  catalogo = { categorie: cat.data, prodotti: prod.data };
+  return catalogo;
+}
+
+// ---------- regole del menu (le stesse controllate dal database) ----------
+function personeSessione() { const s = info.sessione; return (s.adulti || 0) + (s.bambini || 0); }
+function infoCategoria(catId) {
+  const lista = menuCorrente ? menuCorrente.categorie : [];
+  if (!lista.length) return { visibile: true, compresa: false };     // menu senza categorie = tutto a prezzo pieno
+  const c = lista.find(x => x.id === catId);
+  return c ? { visibile: true, compresa: info.sessione.menu_tipo === 'ayce' && c.compresa } : { visibile: false, compresa: false };
+}
+const eCompreso = p => infoCategoria(p.categoria_id).compresa;
+function limiteProdotto(p) { return eCompreso(p) && p.max_pezzi_persona ? p.max_pezzi_persona * personeSessione() : null; }
+function limiteComanda() { return info.max_pezzi_persona_comanda ? info.max_pezzi_persona_comanda * personeSessione() : null; }
+function pezziProdotto(id) { return carrello.filter(r => r.prodotto_id === id).reduce((s, r) => s + r.quantita, 0); }
+function pezziCompresi() { return carrello.filter(r => { const p = prodotto(r.prodotto_id); return p && eCompreso(p); }).reduce((s, r) => s + r.quantita, 0); }
+const prodotto = id => catalogo.prodotti.find(p => p.id === id);
+function prezzoRiga(r) {
+  const p = prodotto(r.prodotto_id); if (!p || eCompreso(p)) return 0;
+  return (Number(p.prezzo_base) + r.opzioni.reduce((s, o) => s + o.prezzo, 0)) * r.quantita;
+}
+/** Si può aggiungere n pezzi di p? Restituisce il messaggio di errore o null. */
+function bloccoAggiunta(p, n) {
+  const lp = limiteProdotto(p);
+  if (lp !== null && pezziProdotto(p.id) + n > lp) return `Massimo ${lp} pezzi di "${p.nome}" per comanda`;
+  const lc = limiteComanda();
+  if (eCompreso(p) && lc !== null && pezziCompresi() + n > lc) return `Massimo ${lc} pezzi per comanda (${info.max_pezzi_persona_comanda} a persona)`;
+  return null;
+}
+
+// ================= 1. APERTURA =================
+function disegnaApertura() {
+  $('n-adulti').textContent = persone.adulti; $('n-bambini').textContent = persone.bambini;
+  document.querySelectorAll('[data-p]').forEach(b => {
+    const v = persone[b.dataset.p] + Number(b.dataset.d);
+    b.disabled = v < 0 || v > 40 || (b.dataset.p === 'adulti' && v < 0);
+  });
+  const menu = info.menu || [];
+  $('lista-menu').innerHTML = menu.length ? menu.map(m => `
+    <button class="menu-scelta ${menuScelto === m.id ? 'sel' : ''}" data-menu="${m.id}">
+      <div class="t"><b>${esc(m.nome)}</b><span class="p">${m.tipo === 'ayce' ? euro(m.prezzo_adulto) + ' <small>a persona</small>' : 'Alla carta'}</span></div>
+      ${m.tipo === 'ayce' && Number(m.prezzo_bambino) ? `<div class="d">Bambini ${euro(m.prezzo_bambino)}</div>` : ''}
+      ${m.descrizione ? `<div class="d">${esc(m.descrizione)}</div>` : ''}
+    </button>`).join('') : '<p class="muted">Nessun menu disponibile in questo momento. Chiedi al personale.</p>';
+  document.querySelectorAll('[data-menu]').forEach(b => b.onclick = () => { menuScelto = b.dataset.menu; disegnaApertura(); });
+  const m = menu.find(x => x.id === menuScelto);
+  const tot = m && m.tipo === 'ayce' ? persone.adulti * m.prezzo_adulto + persone.bambini * m.prezzo_bambino : 0;
+  $('totale-apertura').innerHTML = m && m.tipo === 'ayce' ? `Totale menu: <b>${euro(tot)}</b>` : '';
+  $('btn-inizia').disabled = !m || persone.adulti + persone.bambini < 1;
+}
+document.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { persone[b.dataset.p] = Math.max(0, persone[b.dataset.p] + Number(b.dataset.d)); disegnaApertura(); });
+$('btn-inizia').onclick = async () => {
+  const m = info.menu.find(x => x.id === menuScelto);
+  const pers = persone.adulti + persone.bambini;
+  if (!confirm(`Confermi ${m.nome} per ${pers} ${pers === 1 ? 'persona' : 'persone'}?` + (m.tipo === 'ayce' ? `\nTotale menu ${euro(persone.adulti * m.prezzo_adulto + persone.bambini * m.prezzo_bambino)}` : ''))) return;
+  $('btn-inizia').disabled = true;
+  try {
+    info = await rpc('tavolo_apri', { p_tenant: TENANT, p_tavolo: TAVOLO, p_menu: menuScelto, p_adulti: persone.adulti, p_bambini: persone.bambini });
+    if (info.sessione && info.sessione.menu_id !== menuScelto) toast(`Il tavolo era già stato aperto: ${info.sessione.menu_nome}`);
+    await entraNelMenu();
+  } catch (e) { toast(messaggioErrore(e), true); $('btn-inizia').disabled = false; }
+};
+
+// ================= 2. ORDINAZIONE =================
+async function entraNelMenu() {
+  await caricaCatalogo();
+  menuCorrente = (info.menu || []).find(m => m.id === info.sessione.menu_id) || { categorie: [] };
+  caricaCarrello();
+  carrello = carrello.filter(r => prodotto(r.prodotto_id));
+  const s = info.sessione;
+  $('sub-testata').textContent = `${s.menu_nome} · ${personeSessione()} ${personeSessione() === 1 ? 'persona' : 'persone'}`;
+  disegnaMenu();
+  disegnaComande();
+  mostra('v-menu');
+  aggiornaStato();
+}
+
+function disegnaMenu() {
+  const cats = catalogo.categorie.filter(c => infoCategoria(c.id).visibile)
+    .map(c => ({ ...c, prodotti: catalogo.prodotti.filter(p => p.categoria_id === c.id) }))
+    .filter(c => c.prodotti.length);
+  $('tabs-cat').innerHTML = cats.map((c, i) => `<button class="${i ? '' : 'on'}" data-vai="${c.id}">${esc(c.nome)}</button>`).join('');
+  $('lista-prodotti').innerHTML = cats.length ? cats.map(c => `
+    <section class="categoria" id="cat-${c.id}"><h3>${esc(c.nome)}</h3>
+      ${c.prodotti.map(p => schedaProdotto(p)).join('')}
+    </section>`).join('') : '<div class="vuoto">Nessun piatto disponibile in questo menu.</div>';
+  document.querySelectorAll('[data-vai]').forEach(b => b.onclick = () => {
+    document.getElementById('cat-' + b.dataset.vai).scrollIntoView({ behavior: 'smooth' });
+  });
+  collegaSchede();
+  osservaCategorie();
+  aggiornaBarra();
+}
+
+function schedaProdotto(p) {
+  const compreso = eCompreso(p);
+  const lp = limiteProdotto(p);
+  const n = pezziProdotto(p.id);
+  const conVarianti = p.gruppi.length > 0;
+  const controllo = !conVarianti && n > 0
+    ? `<div class="stepper"><button data-meno="${p.id}">−</button><span>${n}</span><button data-piu="${p.id}">+</button></div>`
+    : `<button class="piu" data-apri="${p.id}" aria-label="Aggiungi">+</button>${conVarianti && n ? `<div style="text-align:center;font-size:12px;font-weight:700;margin-top:3px">${n} in comanda</div>` : ''}`;
+  return `<div class="prodotto" id="prod-${p.id}">
+    ${p.immagine_url ? `<img src="${esc(p.immagine_url)}" alt="" loading="lazy">` : ''}
+    <div class="info">
+      <div class="nome">${esc(p.nome)}</div>
+      ${p.descrizione ? `<div class="desc">${esc(p.descrizione)}</div>` : ''}
+      <div class="riga-prezzo">${compreso ? '<span class="incluso">Incluso nel menu</span>' : `<span class="prezzo">${euro(p.prezzo_base)}</span>`}
+        ${lp ? `<span class="limite">max ${lp} a comanda</span>` : ''}</div>
+    </div>
+    <div class="agg">${controllo}</div>
+  </div>`;
+}
+function ridisegnaScheda(id) {
+  const el = document.getElementById('prod-' + id); if (!el) return;
+  el.outerHTML = schedaProdotto(prodotto(id));
+  collegaSchede();
+}
+function collegaSchede() {
+  document.querySelectorAll('[data-apri]').forEach(b => b.onclick = () => apriProdotto(b.dataset.apri));
+  document.querySelectorAll('[data-piu]').forEach(b => b.onclick = () => aggiungi(prodotto(b.dataset.piu), 1, []));
+  document.querySelectorAll('[data-meno]').forEach(b => b.onclick = () => {
+    const r = carrello.find(x => x.prodotto_id === b.dataset.meno && !x.opzioni.length);
+    if (r) { r.quantita--; if (r.quantita <= 0) carrello.splice(carrello.indexOf(r), 1); }
+    salvaCarrello(); ridisegnaScheda(b.dataset.meno); aggiornaBarra();
+  });
+}
+let osservatore = null;
+function osservaCategorie() {
+  if (osservatore) osservatore.disconnect();
+  osservatore = new IntersectionObserver(voci => {
+    const vis = voci.filter(v => v.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+    if (!vis) return;
+    const id = vis.target.id.slice(4);
+    document.querySelectorAll('[data-vai]').forEach(b => {
+      const on = b.dataset.vai === id; b.classList.toggle('on', on);
+      if (on) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    });
+  }, { rootMargin: '-140px 0px -60% 0px' });
+  document.querySelectorAll('section.categoria').forEach(s => osservatore.observe(s));
+}
+
+function aggiungi(p, n, opzioni) {
+  if (!pubOrdinabile()) return;
+  const blocco = bloccoAggiunta(p, n);
+  if (blocco) { toast(blocco, true); return false; }
+  const chiave = p.id + '|' + opzioni.map(o => o.id).sort().join(',');
+  const esistente = carrello.find(r => r.chiave === chiave);
+  if (esistente) esistente.quantita += n;
+  else carrello.push({ chiave, prodotto_id: p.id, nome: p.nome, quantita: n, opzioni });
+  salvaCarrello(); ridisegnaScheda(p.id); aggiornaBarra();
+  return true;
+}
+function pubOrdinabile() { return !!(info && info.sessione); }
+
+// ---------- foglio prodotto con varianti ----------
+let fp = null;
+function apriProdotto(id) {
+  const p = prodotto(id);
+  if (!p.gruppi.length) { aggiungi(p, 1, []); return; }
+  fp = { p, q: 1, scelte: new Map() };   // gruppo.id -> Set(opzione.id)
+  $('fp-nome').textContent = p.nome;
+  const compreso = eCompreso(p);
+  $('fp-corpo').innerHTML = (p.descrizione ? `<p class="muted">${esc(p.descrizione)}</p>` : '') + p.gruppi.map(g => {
+    const max = g.max_scelte || 1, min = g.min_scelte || (g.obbligatorio ? 1 : 0);
+    const tipo = max === 1 ? 'radio' : 'checkbox';
+    return `<div class="gruppo" data-g="${g.id}"><div class="gt">${esc(g.nome_gruppo)}<small id="gs-${g.id}">${regolaGruppo(min, max)}</small></div>
+      ${g.opzioni.map(o => `<label class="opz"><input type="${tipo}" name="g-${g.id}" value="${o.id}"> ${esc(o.nome)}${!compreso && o.prezzo ? `<span class="pz">+${euro(o.prezzo)}</span>` : ''}</label>`).join('')}
+    </div>`;
+  }).join('');
+  $('fp-corpo').querySelectorAll('input').forEach(inp => inp.onchange = () => {
+    const g = p.gruppi.find(x => x.id === inp.closest('[data-g]').dataset.g);
+    const max = g.max_scelte || 1;
+    const sel = [...$('fp-corpo').querySelectorAll(`[name="g-${g.id}"]:checked`)];
+    if (sel.length > max) { inp.checked = false; toast(`Massimo ${max} scelte per "${g.nome_gruppo}"`, true); }
+    aggiornaFp();
+  });
+  aggiornaFp();
+  apri('velo-prodotto');
+}
+function regolaGruppo(min, max) {
+  if (max === 1) return min ? 'Obbligatorio, 1 scelta' : 'Facoltativo, 1 scelta';
+  return min ? `Scegli da ${min} a ${max}` : `Fino a ${max}`;
+}
+function aggiornaFp() {
+  const { p } = fp; let ok = true;
+  for (const g of p.gruppi) {
+    const min = g.min_scelte || (g.obbligatorio ? 1 : 0);
+    const n = $('fp-corpo').querySelectorAll(`[name="g-${g.id}"]:checked`).length;
+    const el = $('gs-' + g.id);
+    el.classList.toggle('ko', n < min);
+    if (n < min) ok = false;
+  }
+  $('fp-q').textContent = fp.q;
+  const prezzo = eCompreso(p) ? 0 : (Number(p.prezzo_base) + opzioniScelte().reduce((s, o) => s + o.prezzo, 0)) * fp.q;
+  $('fp-aggiungi').textContent = ok ? (prezzo ? `Aggiungi · ${euro(prezzo)}` : 'Aggiungi') : 'Completa le scelte';
+  $('fp-aggiungi').disabled = !ok;
+}
+function opzioniScelte() {
+  return [...$('fp-corpo').querySelectorAll('input:checked')].map(inp => {
+    const g = fp.p.gruppi.find(x => x.id === inp.closest('[data-g]').dataset.g);
+    const o = g.opzioni.find(x => x.id === inp.value);
+    return { id: o.id, nome: o.nome, gruppo: g.nome_gruppo, prezzo: o.prezzo };
+  });
+}
+$('fp-meno').onclick = () => { fp.q = Math.max(1, fp.q - 1); aggiornaFp(); };
+$('fp-piu').onclick = () => { const b = bloccoAggiunta(fp.p, fp.q + 1); if (b) { toast(b, true); return; } fp.q++; aggiornaFp(); };
+$('fp-aggiungi').onclick = () => { if (aggiungi(fp.p, fp.q, opzioniScelte())) { chiudi('velo-prodotto'); toast(`${fp.p.nome} aggiunto`); } };
+
+// ---------- carrello ----------
+function aggiornaBarra() {
+  const n = carrello.reduce((s, r) => s + r.quantita, 0);
+  $('barra-n').textContent = n;
+  const tot = carrello.reduce((s, r) => s + prezzoRiga(r), 0);
+  $('barra-txt').textContent = tot ? `${euro(tot)} ›` : 'Vedi e invia ›';
+  $('barra').classList.toggle('hidden', !n || $('v-menu').classList.contains('hidden'));
+}
+function disegnaCarrello() {
+  if (!carrello.length) { $('carr-corpo').innerHTML = '<div class="vuoto">La comanda è vuota.</div>'; $('btn-invia').disabled = true; return; }
+  const lc = limiteComanda();
+  $('carr-corpo').innerHTML = carrello.map((r, i) => {
+    const pr = prezzoRiga(r);
+    return `<div class="riga-carr"><div class="info"><div class="nome">${esc(r.nome)}</div>
+      ${r.opzioni.length ? `<div class="opz-txt">${r.opzioni.map(o => esc(o.nome)).join(' · ')}</div>` : ''}
+      <div class="opz-txt">${pr ? euro(pr) : 'Incluso'}</div></div>
+      <div class="stepper"><button data-cm="${i}" data-d="-1">−</button><span>${r.quantita}</span><button data-cm="${i}" data-d="1">+</button></div></div>`;
+  }).join('') + (lc !== null ? `<div class="riepilogo-limiti">Piatti del menu in questa comanda: <b>${pezziCompresi()}</b> su ${lc}</div>` : '');
+  $('carr-corpo').querySelectorAll('[data-cm]').forEach(b => b.onclick = () => {
+    const r = carrello[Number(b.dataset.cm)], d = Number(b.dataset.d);
+    if (d > 0) { const bl = bloccoAggiunta(prodotto(r.prodotto_id), 1); if (bl) { toast(bl, true); return; } }
+    r.quantita += d; if (r.quantita <= 0) carrello.splice(carrello.indexOf(r), 1);
+    salvaCarrello(); disegnaCarrello(); ridisegnaScheda(r.prodotto_id); aggiornaBarra();
+  });
+  const attesa = secondiAttesa();
+  $('carr-avviso').innerHTML = attesa > 0 ? `<div class="avviso" style="margin:0 0 10px">Potrai inviare tra ${formattaAttesa(attesa)}</div>` : '';
+  $('btn-invia').disabled = attesa > 0;
+}
+$('btn-carrello').onclick = () => { disegnaCarrello(); apri('velo-carrello'); };
+$('btn-invia').onclick = async () => {
+  $('btn-invia').disabled = true; $('btn-invia').textContent = 'Invio in corso…';
+  try {
+    const righe = carrello.map(r => ({ prodotto_id: r.prodotto_id, quantita: r.quantita, opzioni: r.opzioni.map(o => ({ id: o.id })) }));
+    const r = await rpc('tavolo_ordina', { p_sessione: info.sessione.id, p_righe: righe });
+    carrello = []; salvaCarrello();
+    info = r.info;
+    chiudi('velo-carrello');
+    disegnaMenu(); disegnaComande(); aggiornaStato();
+    toast(`Comanda ${r.numero_comanda} inviata in cucina!`);
+  } catch (e) {
+    toast(messaggioErrore(e), true);
+    if (/chiuso/i.test(messaggioErrore(e))) setTimeout(avvia, 1500);
+  } finally { $('btn-invia').textContent = 'Invia comanda'; disegnaCarrello(); }
+};
+
+// ---------- tempo per il riordino ----------
+let scartoOrologio = 0; // differenza tra orologio del telefono e del server
+function secondiAttesa() {
+  const p = info && info.sessione && info.sessione.prossimo_ordine_il;
+  if (!p) return 0;
+  return Math.max(0, Math.ceil((new Date(p).getTime() - (Date.now() + scartoOrologio)) / 1000));
+}
+function formattaAttesa(s) { const m = Math.floor(s / 60), r = s % 60; return m ? `${m}:${String(r).padStart(2, '0')} min` : `${r} s`; }
+function aggiornaStato() {
+  clearInterval(timerConto);
+  const disegna = () => {
+    const s = secondiAttesa(), el = $('stato-comanda');
+    if (s > 0) { el.className = 'stato attesa'; el.innerHTML = `<span>⏳</span><span>Prossima comanda tra <b>${formattaAttesa(s)}</b><br><small class="muted">Intanto puoi preparare la prossima</small></span>`; }
+    else {
+      el.className = 'stato';
+      const lc = limiteComanda();
+      el.innerHTML = `<span>✅</span><span>Puoi inviare una comanda` + (lc ? ` · fino a <b>${lc}</b> piatti del menu` : '') + '</span>';
+      if (timerConto) { clearInterval(timerConto); timerConto = null; }
+    }
+    if (!$('velo-carrello').classList.contains('hidden')) {
+      $('btn-invia').disabled = s > 0 || !carrello.length;
+      if (s === 0) $('carr-avviso').innerHTML = '';
+    }
+  };
+  disegna();
+  if (secondiAttesa() > 0) timerConto = setInterval(disegna, 1000);
+}
+
+// ---------- storico comande ----------
+function disegnaComande() {
+  const c = (info.sessione && info.sessione.comande) || [];
+  $('n-comande').textContent = c.length ? `(${c.length})` : '';
+  $('sotto-comande').innerHTML = c.length ? c.slice().reverse().map(k => `
+    <div class="comanda-storico"><div class="t"><span>Comanda ${k.numero}</span><span class="muted" style="font-family:'Segoe UI';font-weight:600">${new Date(k.creato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span></div>
+      <ul>${(k.righe || []).map(r => `<li>${r.quantita}× ${esc(r.nome)}${(r.opzioni || []).length ? ` <small>(${r.opzioni.map(o => esc(o.nome)).join(', ')})</small>` : ''}</li>`).join('')}</ul></div>`).join('')
+    : '<div class="vuoto">Non avete ancora inviato comande.</div>';
+}
+document.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('[data-vista]').forEach(x => x.classList.toggle('on', x === b));
+  $('sotto-ordina').classList.toggle('hidden', b.dataset.vista !== 'ordina');
+  $('sotto-comande').classList.toggle('hidden', b.dataset.vista !== 'comande');
+});
+
+// ---------- aggiornamento periodico (altri telefoni, chiusura del conto) ----------
+async function controllaSessione() {
+  if (document.hidden || !info) return;
+  try {
+    const prima = info.sessione && info.sessione.id;
+    await caricaInfo();
+    scartoOrologio = new Date(info.ora_server).getTime() - Date.now();
+    if (!info.sessione || info.sessione.id !== prima) { toast('Il tavolo è stato chiuso', true); avvia(); return; }
+    if (!$('v-menu').classList.contains('hidden')) { disegnaComande(); aggiornaStato(); }
+  } catch (_) {}
+}
+setInterval(controllaSessione, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) controllaSessione(); });
+
+// ================= AVVIO =================
+async function avvia() {
+  $('num-tavolo').textContent = Number.isInteger(TAVOLO) ? TAVOLO : '–';
+  if (!TENANT || !Number.isInteger(TAVOLO)) { errore('QR non valido: manca il locale o il numero del tavolo.'); return; }
+  mostra('v-caricamento');
+  try {
+    caricaLocale();
+    await caricaInfo();
+    scartoOrologio = new Date(info.ora_server).getTime() - Date.now();
+    if (info.sessione) await entraNelMenu();
+    else {
+      menuScelto = info.menu && info.menu.length === 1 ? info.menu[0].id : null;
+      $('sub-testata').textContent = '';
+      disegnaApertura(); mostra('v-apertura');
+    }
+  } catch (e) { errore(messaggioErrore(e)); }
+}
+avvia();
+</script>
+</body>
+</html>
