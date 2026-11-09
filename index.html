@@ -4770,6 +4770,20 @@ const ICONE_CATEGORIA_BASE64 = {
   </div>
 </div>
 
+<div class="modal-backdrop" id="modal-qr-tavolo">
+  <div class="modal" style="max-width:420px; text-align:center;">
+    <h3 id="qr-titolo">QR tavolo</h3>
+    <div id="qr-immagine" style="background:#fff; border-radius:12px; padding:14px; margin:10px auto; width:260px; height:260px;"></div>
+    <div class="tv-hint" id="qr-link" style="word-break:break-all;"></div>
+    <div class="modal-actions" style="justify-content:center; flex-wrap:wrap;">
+      <button type="button" class="secondary" onclick="closeModal('modal-qr-tavolo')">Chiudi</button>
+      <button type="button" class="secondary" id="qr-copia">Copia link</button>
+      <button type="button" class="secondary" id="qr-stampa">Stampa</button>
+      <button type="button" id="qr-scarica">Scarica PNG</button>
+    </div>
+  </div>
+</div>
+
 <style>
   .tv-griglia { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 18px; }
   @media (max-width: 860px) { .tv-griglia { grid-template-columns: 1fr; } }
@@ -4970,7 +4984,7 @@ const ICONE_CATEGORIA_BASE64 = {
     tvTavoliCache = data;
     cont.innerHTML = data.length ? data.map(t => `
       <div class="tv-tavolo ${t.attivo ? '' : 'off'}"><div class="n">${t.numero}</div><div class="tv-hint">${t.attivo ? 'QR attivo' : 'QR disattivato'}</div>
-        <div class="az"><button class="secondary" onclick="tvApriLinkTavolo(${t.numero})">Apri</button>
+        <div class="az"><button onclick="tvMostraQr(${t.numero})">QR</button><button class="secondary" onclick="tvApriLinkTavolo(${t.numero})">Apri</button>
         <button class="secondary" onclick="tvAttivaTavolo('${t.id}', ${!t.attivo})">${t.attivo ? 'Disattiva' : 'Attiva'}</button></div></div>`).join('')
       : '<div class="empty-state">Nessun tavolo. Importali da Geri con lo spooler oppure aggiungili con "+ Tavolo".</div>';
   }
@@ -4990,24 +5004,49 @@ const ICONE_CATEGORIA_BASE64 = {
   });
   document.getElementById('btn-aggiorna-tavoli').addEventListener('click', caricaTavoliAyce);
 
-  // Pagina stampabile: un QR per tavolo attivo, 6 per foglio A4
-  document.getElementById('btn-stampa-qr').addEventListener('click', async () => {
-    const tavoli = tvTavoliCache.filter(t => t.attivo);
-    if (!tavoli.length) { alert('Nessun tavolo attivo.'); return; }
-    if (typeof qrcode === 'undefined') { alert('Libreria QR non caricata: controlla la connessione e ricarica la pagina.'); return; }
+  // QR del singolo tavolo: anteprima grande, PNG da scaricare, stampa, link
+  function tvSvgQr(n) { const qr = qrcode(0, 'M'); qr.addData(tvLinkTavolo(n)); qr.make(); return qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true }); }
+  function tvPaginaStampa(schede) {
     const nomeLocale = (document.getElementById('imp-nome-locale') && document.getElementById('imp-nome-locale').value) || '';
-    const schede = tavoli.map(t => {
-      const qr = qrcode(0, 'M'); qr.addData(tvLinkTavolo(t.numero)); qr.make();
-      return `<div class="q"><div class="loc">${escapeHtml(nomeLocale)}</div><div class="tav">Tavolo ${t.numero}</div>${qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true })}<div class="txt">Inquadra il codice per ordinare</div></div>`;
-    }).join('');
     const w = window.open('', '_blank');
     w.document.write(`<!doctype html><html lang="it"><head><meta charset="utf-8"><title>QR tavoli</title><style>
       @page { size: A4; margin: 10mm; } body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
       .g { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
       .q { border: 1.5px dashed #999; border-radius: 6mm; padding: 6mm; text-align: center; break-inside: avoid; height: 84mm; display: flex; flex-direction: column; align-items: center; justify-content: center; }
       .q svg { width: 52mm; height: 52mm; } .loc { font-size: 11pt; color: #555; } .tav { font-size: 22pt; font-weight: 800; margin: 1mm 0 2mm; } .txt { font-size: 10pt; margin-top: 2mm; }
-      </style></head><body><div class="g">${schede}</div><script>window.onload = () => window.print();<\/script></body></html>`);
+      </style></head><body><div class="g">${schede.map(n => `<div class="q"><div class="loc">${escapeHtml(nomeLocale)}</div><div class="tav">Tavolo ${n}</div>${tvSvgQr(n)}<div class="txt">Inquadra il codice per ordinare</div></div>`).join('')}</div><script>window.onload = () => window.print();<\/script></body></html>`);
     w.document.close();
+  }
+  window.tvMostraQr = function(n) {
+    if (typeof qrcode === 'undefined') { alert('Libreria QR non caricata: controlla la connessione e ricarica la pagina.'); return; }
+    document.getElementById('qr-titolo').textContent = 'QR tavolo ' + n;
+    document.getElementById('qr-immagine').innerHTML = tvSvgQr(n);
+    document.querySelector('#qr-immagine svg').setAttribute('style', 'width:100%;height:100%');
+    document.getElementById('qr-link').textContent = tvLinkTavolo(n);
+    document.getElementById('qr-copia').onclick = async () => { try { await navigator.clipboard.writeText(tvLinkTavolo(n)); alert('Link copiato'); } catch (_) { prompt('Copia il link:', tvLinkTavolo(n)); } };
+    document.getElementById('qr-stampa').onclick = () => tvPaginaStampa([n]);
+    document.getElementById('qr-scarica').onclick = () => {
+      // PNG 1000x1180: QR + "Tavolo N" sotto, pronto da stampare o mandare
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = 1000; c.height = 1180;
+        const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+        x.drawImage(img, 60, 40, 880, 880);
+        x.fillStyle = '#111'; x.font = 'bold 110px Segoe UI, Arial, sans-serif'; x.textAlign = 'center';
+        x.fillText('Tavolo ' + n, 500, 1080);
+        const a = document.createElement('a'); a.download = `QR_tavolo_${n}.png`; a.href = c.toDataURL('image/png'); a.click();
+      };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(tvSvgQr(n));
+    };
+    openModal('modal-qr-tavolo');
+  };
+
+  // Pagina stampabile: un QR per tavolo attivo, 6 per foglio A4
+  document.getElementById('btn-stampa-qr').addEventListener('click', async () => {
+    const tavoli = tvTavoliCache.filter(t => t.attivo);
+    if (!tavoli.length) { alert('Nessun tavolo attivo.'); return; }
+    if (typeof qrcode === 'undefined') { alert('Libreria QR non caricata: controlla la connessione e ricarica la pagina.'); return; }
+    tvPaginaStampa(tavoli.map(t => t.numero));
   });
 </script>
 
