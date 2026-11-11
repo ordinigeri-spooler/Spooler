@@ -379,6 +379,7 @@
     <button class="tab" data-section="allergeni">Allergeni</button>
     <button class="tab" data-section="statistiche">Statistiche</button>
     <button class="tab" data-section="backup">Backup</button>
+    <button class="tab" data-section="menu">Menu</button>
   </nav>
 
   <main>
@@ -447,7 +448,7 @@
     <!-- ---- TAVOLI & ALL YOU CAN EAT (ordine al tavolo con QR) ---- -->
     <section class="section" id="section-tavoli">
       <div class="section-header">
-        <h2>Tavoli &amp; All you can eat</h2>
+        <h2>Tavoli</h2>
         <button type="button" class="secondary" id="btn-aggiorna-tavoli">↻ Aggiorna</button>
       </div>
 
@@ -471,35 +472,6 @@
           <div class="section-header" style="margin-bottom:6px;"><h3>Tavoli aperti adesso</h3></div>
           <div id="tv-sessioni"><div class="empty-state">Caricamento…</div></div>
         </div>
-      </div>
-
-      <div class="section-header" style="margin-top:26px;">
-        <h2 style="font-size:20px;">Menu al tavolo</h2>
-        <button type="button" id="btn-nuovo-menu-tavolo">+ Nuovo menu</button>
-      </div>
-      <p class="tv-hint" style="margin-top:-8px;">Pranzo e cena all you can eat (prezzo a persona + PLU di Geri) e Alla carta. Il cliente vede solo i menu del giorno e della fascia oraria giusti.</p>
-      <div id="tv-lista-menu"></div>
-
-      <div class="section-header" style="margin-top:26px;">
-        <h2 style="font-size:20px;">Prodotti dei menu</h2>
-        <button type="button" class="secondary" id="mp-salva" disabled>Salva scheda</button>
-      </div>
-      <p class="tv-hint" style="margin-top:-8px;">Una scheda per ogni menu. Carica i PLU (anche tutti), poi per ognuno: <b>Incluso</b> = a 0 € (pagato col menu) oppure a pagamento col suo <b>prezzo</b>; <b>Max/pers.</b> = pezzi per comanda a persona; <b>Bevanda incl.</b> = conta tra le bevande incluse del menu. Se la scheda ha prodotti, le categorie del menu non vengono più usate.</p>
-      <div class="mp-tabs" id="mp-tabs"></div>
-      <div class="tv-box" id="mp-box" style="border-top-left-radius:0; display:none;">
-        <div class="mp-toolbar">
-          <input type="text" id="mp-cerca" placeholder="Cerca nella scheda" style="margin:0; max-width:220px;">
-          <select id="mp-aggiungi-cat" style="margin:0; max-width:260px;"><option value="">+ Aggiungi categoria…</option></select>
-          <button type="button" class="secondary" id="mp-aggiungi-tutti">+ Aggiungi tutti i prodotti</button>
-          <button type="button" class="secondary" id="mp-tutti-inclusi">Tutti inclusi</button>
-          <button type="button" class="secondary" id="mp-tutti-pagamento">Tutti a pagamento</button>
-          <button type="button" class="danger" id="mp-svuota">Svuota scheda</button>
-        </div>
-        <div class="mp-riepilogo tv-hint" id="mp-riepilogo"></div>
-        <div class="mp-tabella-wrap"><table class="mp-tabella" id="mp-tabella">
-          <thead><tr><th>Prodotto</th><th>Categoria</th><th title="Compreso nel prezzo del menu (0 €)">Incluso</th><th>Prezzo €</th><th title="Pezzi per comanda, a persona">Max/pers.</th><th title="Conta tra le bevande incluse del menu">Bevanda incl.</th><th></th></tr></thead>
-          <tbody id="mp-corpo"></tbody>
-        </table></div>
       </div>
 
       <div class="section-header" style="margin-top:26px;">
@@ -818,6 +790,95 @@
           </div>
           <div class="msg" id="pulisci-msg"></div>
         </div>
+      </div>
+    </section>
+
+    <!-- ---- MENU AL TAVOLO (AYCE, menu fisso, alla carta) ---- -->
+    <section class="section" id="section-menu">
+      <div class="section-header">
+        <h2>Menu al tavolo</h2>
+        <button type="button" id="btn-nuovo-menu-tavolo">+ Aggiungi menu</button>
+      </div>
+      <p class="tv-hint" style="margin-top:-8px;">Un menu per ogni formula: all you can eat pranzo e cena, domenica, festa, menu fisso, alla carta. Ogni menu ha la sua linguetta con impostazioni e scheda prodotti. I coperti si scelgono tra i PLU di Geri segnati come coperto (Tavoli → Coperti).</p>
+      <div class="mp-tabs" id="mn-tabs"></div>
+      <div id="mn-vuoto" class="empty-state" style="display:none;">Nessun menu: premi "+ Aggiungi menu".</div>
+      <div class="tv-box" id="mn-pannello" style="border-top-left-radius:0; display:none;">
+        <h3 id="modal-menu-tavolo-title" style="margin:0 0 10px;">Nuovo menu</h3>
+<form id="form-menu-tavolo">
+      <input type="hidden" id="mt-id">
+      <label for="mt-nome">Nome (lo vede il cliente)</label>
+      <input type="text" id="mt-nome" placeholder="Es. All you can eat Cena" required>
+      <label for="mt-tipo">Tipo</label>
+      <select id="mt-tipo">
+        <option value="ayce">All you can eat (prezzo a persona, piatti compresi a 0 €)</option>
+        <option value="fisso">Menu fisso (prezzo a persona, N piatti a scelta + bevanda)</option>
+        <option value="carta">Alla carta (piatti a prezzo pieno)</option>
+      </select>
+      <label for="mt-descrizione">Descrizione (facoltativa)</label>
+      <input type="text" id="mt-descrizione" placeholder="Es. Bevande e dolci esclusi">
+
+      <label>Giorni in cui si può scegliere</label>
+      <div class="tv-giorni" id="mt-giorni"></div>
+      <div class="row-2">
+        <div><label for="mt-ora-da">Dalle</label><input type="time" id="mt-ora-da"></div>
+        <div><label for="mt-ora-a">Alle</label><input type="time" id="mt-ora-a"></div>
+      </div>
+      <p class="tv-hint">Lascia vuoto per renderlo sempre disponibile. Es. pranzo 11:30–15:00, cena 18:30–23:30.</p>
+
+      <div class="row-2">
+        <div><label for="mt-plu-adulto">Coperto adulto</label><select id="mt-plu-adulto"></select></div>
+        <div><label for="mt-plu-bambino">Coperto bambino</label><select id="mt-plu-bambino"></select></div>
+      </div>
+      <div class="row-2">
+        <div><label for="mt-prezzo-adulto">Prezzo adulto €</label><input type="number" step="0.01" min="0" id="mt-prezzo-adulto"></div>
+        <div><label for="mt-prezzo-bambino">Prezzo bambino €</label><input type="number" step="0.01" min="0" id="mt-prezzo-bambino"></div>
+      </div>
+      <p class="tv-hint">I coperti sono i PLU di Geri spuntati come "coperto" (riquadro Coperti qui sotto). Scegliendo un coperto il prezzo viene preso da Geri; se in Geri cambia, si aggiorna al prossimo "Importa catalogo". All'apertura del tavolo lo spooler scrive su Geri il coperto × persone (es. 2× adulto + 1× bambino). Nell'alla carta puoi scegliere il coperto o lasciare "nessuno".</p>
+
+      <div class="row-2" id="mt-blocco-limiti">
+        <div><label for="mt-limite-piatti">Piatti inclusi a persona (totale menu)</label><input type="number" min="1" id="mt-limite-piatti" placeholder="vuoto = illimitati (AYCE)"></div>
+        <div><label for="mt-bevande-incluse">Bevande incluse a persona</label><input type="number" min="0" id="mt-bevande-incluse" placeholder="vuoto = nessun limite"></div>
+      </div>
+      <p class="tv-hint">Menu fisso: es. 10 piatti a scelta e 1 bevanda a persona per tutta la permanenza; oltre, le bevande "incluse" si pagano. Le bevande incluse si segnano nella scheda prodotti del menu.</p>
+
+      <label>Categorie del menu <span style="font-weight:400; opacity:.7;">(modo semplice: usato solo se la scheda prodotti del menu è vuota)</span></label>
+      <p class="tv-hint" style="margin-top:0;">Spunta le categorie visibili. Nell'all you can eat togli "compresa" a quelle che si pagano a parte (es. bevande). Nessuna spunta in un menu alla carta = tutte le categorie. <b>Se nel tab del menu scegli i piatti uno per uno, le categorie non contano più.</b></p>
+      <div id="mt-categorie" class="tv-categorie"></div>
+
+      <div class="row-2">
+        <div><label for="mt-ordine">Ordine</label><input type="number" id="mt-ordine" value="0"></div>
+        <div><label style="display:flex; align-items:center; gap:8px; margin-top:38px;"><input type="checkbox" id="mt-attivo" style="width:auto;" checked> Attivo</label></div>
+      </div>
+
+      <div class="msg" id="menu-tavolo-msg"></div>
+      <div class="modal-actions" style="justify-content:flex-start;">
+        <button type="submit">Salva impostazioni menu</button>
+        <button type="button" class="danger" id="mn-elimina">Elimina menu</button>
+      </div>
+    </form>
+      </div>
+      <div id="mn-scheda" style="display:none;">
+      <div class="section-header" style="margin-top:8px;">
+        <h3 style="margin:0;">Prodotti del menu</h3>
+        <button type="button" class="secondary" id="mp-salva" disabled>Salva scheda</button>
+      </div>
+      <p class="tv-hint" style="margin-top:-8px;">Una scheda per ogni menu. Carica i PLU (anche tutti), poi per ognuno: <b>Incluso</b> = a 0 € (pagato col menu) oppure a pagamento col suo <b>prezzo</b>; <b>Max/pers.</b> = pezzi per comanda a persona; <b>Bevanda incl.</b> = conta tra le bevande incluse del menu. Se la scheda ha prodotti, le categorie del menu non vengono più usate.</p>
+      <div class="tv-box" id="mp-box" style="display:none;">
+        <div class="mp-toolbar">
+          <input type="text" id="mp-cerca" placeholder="Cerca nella scheda" style="margin:0; max-width:220px;">
+          <select id="mp-aggiungi-cat" style="margin:0; max-width:260px;"><option value="">+ Aggiungi categoria…</option></select>
+          <button type="button" class="secondary" id="mp-aggiungi-tutti">+ Aggiungi tutti i prodotti</button>
+          <button type="button" class="secondary" id="mp-tutti-inclusi">Tutti inclusi</button>
+          <button type="button" class="secondary" id="mp-tutti-pagamento">Tutti a pagamento</button>
+          <button type="button" class="danger" id="mp-svuota">Svuota scheda</button>
+        </div>
+        <div class="mp-riepilogo tv-hint" id="mp-riepilogo"></div>
+        <div class="mp-tabella-wrap"><table class="mp-tabella" id="mp-tabella">
+          <thead><tr><th>Prodotto</th><th>Categoria</th><th title="Compreso nel prezzo del menu (0 €)">Incluso</th><th>Prezzo €</th><th title="Pezzi per comanda, a persona">Max/pers.</th><th title="Conta tra le bevande incluse del menu">Bevanda incl.</th><th></th></tr></thead>
+          <tbody id="mp-corpo"></tbody>
+        </table></div>
+      </div>
+
       </div>
     </section>
   </main>
@@ -1511,6 +1572,7 @@ const ICONE_CATEGORIA_BASE64 = {
       if (tab.dataset.section === 'allergeni') caricaAllergeni();
       if (tab.dataset.section === 'statistiche') caricaStatistiche();
       if (tab.dataset.section === 'tavoli') caricaTavoliAyce();
+      if (tab.dataset.section === 'menu') caricaMenuSezione();
       if (tab.dataset.section === 'ordini') {
         const campoData = document.getElementById('filtro-data-ordini');
         campoData.value = new Date().toISOString().split('T')[0];
@@ -4757,63 +4819,6 @@ const ICONE_CATEGORIA_BASE64 = {
   })();
 </script>
 
-<div class="modal-backdrop" id="modal-menu-tavolo">
-  <div class="modal" style="max-width:640px;">
-    <h3 id="modal-menu-tavolo-title">Nuovo menu</h3>
-    <form id="form-menu-tavolo">
-      <input type="hidden" id="mt-id">
-      <label for="mt-nome">Nome (lo vede il cliente)</label>
-      <input type="text" id="mt-nome" placeholder="Es. All you can eat Cena" required>
-      <label for="mt-tipo">Tipo</label>
-      <select id="mt-tipo">
-        <option value="ayce">All you can eat (prezzo a persona, piatti compresi a 0 €)</option>
-        <option value="fisso">Menu fisso (prezzo a persona, N piatti a scelta + bevanda)</option>
-        <option value="carta">Alla carta (piatti a prezzo pieno)</option>
-      </select>
-      <label for="mt-descrizione">Descrizione (facoltativa)</label>
-      <input type="text" id="mt-descrizione" placeholder="Es. Bevande e dolci esclusi">
-
-      <label>Giorni in cui si può scegliere</label>
-      <div class="tv-giorni" id="mt-giorni"></div>
-      <div class="row-2">
-        <div><label for="mt-ora-da">Dalle</label><input type="time" id="mt-ora-da"></div>
-        <div><label for="mt-ora-a">Alle</label><input type="time" id="mt-ora-a"></div>
-      </div>
-      <p class="tv-hint">Lascia vuoto per renderlo sempre disponibile. Es. pranzo 11:30–15:00, cena 18:30–23:30.</p>
-
-      <div class="row-2">
-        <div><label for="mt-plu-adulto">Coperto adulto</label><select id="mt-plu-adulto"></select></div>
-        <div><label for="mt-plu-bambino">Coperto bambino</label><select id="mt-plu-bambino"></select></div>
-      </div>
-      <div class="row-2">
-        <div><label for="mt-prezzo-adulto">Prezzo adulto €</label><input type="number" step="0.01" min="0" id="mt-prezzo-adulto"></div>
-        <div><label for="mt-prezzo-bambino">Prezzo bambino €</label><input type="number" step="0.01" min="0" id="mt-prezzo-bambino"></div>
-      </div>
-      <p class="tv-hint">I coperti sono i PLU di Geri spuntati come "coperto" (riquadro Coperti qui sotto). Scegliendo un coperto il prezzo viene preso da Geri; se in Geri cambia, si aggiorna al prossimo "Importa catalogo". All'apertura del tavolo lo spooler scrive su Geri il coperto × persone (es. 2× adulto + 1× bambino). Nell'alla carta puoi scegliere il coperto o lasciare "nessuno".</p>
-
-      <div class="row-2" id="mt-blocco-limiti">
-        <div><label for="mt-limite-piatti">Piatti inclusi a persona (totale menu)</label><input type="number" min="1" id="mt-limite-piatti" placeholder="vuoto = illimitati (AYCE)"></div>
-        <div><label for="mt-bevande-incluse">Bevande incluse a persona</label><input type="number" min="0" id="mt-bevande-incluse" placeholder="vuoto = nessun limite"></div>
-      </div>
-      <p class="tv-hint">Menu fisso: es. 10 piatti a scelta e 1 bevanda a persona per tutta la permanenza; oltre, le bevande "incluse" si pagano. Le bevande incluse si segnano nella scheda prodotti del menu.</p>
-
-      <label>Categorie del menu <span style="font-weight:400; opacity:.7;">(modo semplice: usato solo se la scheda prodotti del menu è vuota)</span></label>
-      <p class="tv-hint" style="margin-top:0;">Spunta le categorie visibili. Nell'all you can eat togli "compresa" a quelle che si pagano a parte (es. bevande). Nessuna spunta in un menu alla carta = tutte le categorie. <b>Se nel tab del menu scegli i piatti uno per uno, le categorie non contano più.</b></p>
-      <div id="mt-categorie" class="tv-categorie"></div>
-
-      <div class="row-2">
-        <div><label for="mt-ordine">Ordine</label><input type="number" id="mt-ordine" value="0"></div>
-        <div><label style="display:flex; align-items:center; gap:8px; margin-top:38px;"><input type="checkbox" id="mt-attivo" style="width:auto;" checked> Attivo</label></div>
-      </div>
-
-      <div class="msg" id="menu-tavolo-msg"></div>
-      <div class="modal-actions">
-        <button type="button" class="secondary" onclick="closeModal('modal-menu-tavolo')">Annulla</button>
-        <button type="submit">Salva</button>
-      </div>
-    </form>
-  </div>
-</div>
 
 
 <div class="modal-backdrop" id="modal-qr-tavolo">
@@ -4892,9 +4897,34 @@ const ICONE_CATEGORIA_BASE64 = {
 
   async function caricaTavoliAyce() {
     await tvCaricaPlu();
-    await Promise.all([tvCaricaImpostazioni(), tvCaricaMenu(), tvCaricaTavoli(), tvCaricaSessioni()]);
-    await mpCarica();
+    await Promise.all([tvCaricaImpostazioni(), tvCaricaTavoli(), tvCaricaSessioni()]);
   }
+  // sezione Menu: linguette per menu, ognuna con impostazioni + scheda prodotti
+  let mnNuovo = false;
+  async function caricaMenuSezione(selezionaId) {
+    await tvCaricaPlu();
+    await tvCaricaMenu();
+    await mpCarica();
+    if (selezionaId) mpMenuAttivo = selezionaId;
+    mnNuovo = false;
+    mnDisegna();
+  }
+  function mnDisegna() {
+    const tabs = document.getElementById('mn-tabs');
+    tabs.innerHTML = tvMenuCache.map(m => `<button type="button" class="mp-tab ${!mnNuovo && m.id === mpMenuAttivo ? 'on' : ''}" data-mn="${m.id}">${escapeHtml(m.nome)} <small>${(tvSchedeCache[m.id] || []).length}</small></button>`).join('')
+      + (mnNuovo ? '<button type="button" class="mp-tab on">+ Nuovo menu</button>' : '');
+    tabs.querySelectorAll('[data-mn]').forEach(b => b.onclick = () => {
+      if (mpModificato && !confirm('Ci sono modifiche non salvate nella scheda prodotti: le perdi?')) return;
+      mpModificato = false; mnNuovo = false; mpMenuAttivo = b.dataset.mn; mnDisegna();
+    });
+    const m = !mnNuovo ? tvMenuCache.find(x => x.id === mpMenuAttivo) : null;
+    document.getElementById('mn-vuoto').style.display = !tvMenuCache.length && !mnNuovo ? '' : 'none';
+    document.getElementById('mn-pannello').style.display = (m || mnNuovo) ? '' : 'none';
+    document.getElementById('mn-scheda').style.display = m ? '' : 'none';
+    if (m || mnNuovo) tvApriMenu(m || null);
+    if (m) mpDisegnaTabs();
+  }
+  document.getElementById('mn-elimina').addEventListener('click', () => { const id = document.getElementById('mt-id').value; if (id) tvEliminaMenu(id); });
 
   // ---------- regole ----------
   async function tvCaricaImpostazioni() {
@@ -4996,10 +5026,10 @@ const ICONE_CATEGORIA_BASE64 = {
       sbClient.from('menu_tavolo').select('*, menu_tavolo_categorie(categoria_id, compresa), menu_tavolo_prodotti(prodotto_id)').eq('tenant_id', currentTenantId).order('ordine_visualizzazione').order('nome'),
       sbClient.from('categorie').select('id, nome, ordine_visualizzazione').eq('tenant_id', currentTenantId).order('ordine_visualizzazione'),
     ]);
-    const cont = document.getElementById('tv-lista-menu');
-    if (m.error) { cont.innerHTML = '<div class="empty-state">Errore: ' + escapeHtml(m.error.message) + '</div>'; return; }
+    if (m.error) { alert('Errore nel caricare i menu: ' + m.error.message); return; }
     tvMenuCache = m.data; tvCategorieCache = c.data || [];
-    if (!tvMenuCache.length) { cont.innerHTML = '<div class="empty-state">Nessun menu: crea ad esempio "All you can eat Pranzo", "All you can eat Cena" e "Alla carta".</div>'; return; }
+    const cont = document.getElementById('tv-lista-menu');
+    if (!cont) return;
     cont.innerHTML = tvMenuCache.map(x => {
       const giorni = TV_GIORNI.filter(([k]) => x.giorni && x.giorni[k]).map(([, l]) => l);
       const fascia = x.ora_da && x.ora_a ? `${tvOra(x.ora_da)}–${tvOra(x.ora_a)}` : 'tutto il giorno';
@@ -5044,7 +5074,7 @@ const ICONE_CATEGORIA_BASE64 = {
       : '<div class="r">Nessuna categoria: importa prima il catalogo da Geri.</div>';
     tvAggiornaTipo();
     clearMsg('menu-tavolo-msg');
-    openModal('modal-menu-tavolo');
+    document.getElementById('mn-elimina').style.display = x ? '' : 'none';
   }
   function tvAggiornaTipo() {
     const ayce = document.getElementById('mt-tipo').value !== 'carta';
@@ -5052,14 +5082,14 @@ const ICONE_CATEGORIA_BASE64 = {
     document.querySelectorAll('#mt-categorie .comp').forEach(el => el.style.display = ayce ? '' : 'none');
   }
   document.getElementById('mt-tipo').addEventListener('change', tvAggiornaTipo);
-  document.getElementById('btn-nuovo-menu-tavolo').addEventListener('click', () => tvApriMenu(null));
-  window.tvModificaMenu = id => tvApriMenu(tvMenuCache.find(x => x.id === id));
+  document.getElementById('btn-nuovo-menu-tavolo').addEventListener('click', () => { if (mpModificato && !confirm('Ci sono modifiche non salvate nella scheda prodotti: le perdi?')) return; mpModificato = false; mnNuovo = true; mnDisegna(); });
   window.tvEliminaMenu = async function(id) {
     const x = tvMenuCache.find(m => m.id === id);
     if (!confirm(`Eliminare il menu "${x.nome}"? I tavoli già aperti con questo menu continuano a funzionare.`)) return;
     const { error } = await sbClient.from('menu_tavolo').delete().eq('id', id);
     if (error) { alert('Errore: ' + error.message); return; }
-    tvCaricaMenu();
+    mpModificato = false;
+    caricaMenuSezione();
   };
 
   document.getElementById('form-menu-tavolo').addEventListener('submit', async e => {
@@ -5100,8 +5130,8 @@ const ICONE_CATEGORIA_BASE64 = {
       if (!error && cats.length) ({ error } = await sbClient.from('menu_tavolo_categorie').insert(cats.map(c => ({ menu_id: menuId, ...c }))));
     }
     if (error) { showMsg('menu-tavolo-msg', 'Errore: ' + error.message, 'error'); return; }
-    closeModal('modal-menu-tavolo');
-    tvCaricaMenu();
+    await caricaMenuSezione(menuId);
+    showMsg('menu-tavolo-msg', 'Menu salvato.' + (id ? '' : ' Ora carica i prodotti nella scheda qui sotto.'), 'ok');
   });
 
   // ---------- schede prodotti per menu ----------
@@ -5124,15 +5154,10 @@ const ICONE_CATEGORIA_BASE64 = {
     sel.innerHTML = '<option value="">+ Aggiungi categoria…</option>' + cats.map(([id, n]) => `<option value="${id}">${escapeHtml(n)}</option>`).join('');
     if (!tvMenuCache.some(m => m.id === mpMenuAttivo)) mpMenuAttivo = tvMenuCache.length ? tvMenuCache[0].id : null;
     mpModificato = false;
-    mpDisegnaTabs();
   }
   function mpDisegnaTabs() {
-    const tabs = document.getElementById('mp-tabs');
-    tabs.innerHTML = tvMenuCache.map(m => `<button type="button" class="mp-tab ${m.id === mpMenuAttivo ? 'on' : ''}" data-mp="${m.id}">${escapeHtml(m.nome)} <small>${(tvSchedeCache[m.id] || []).length}</small></button>`).join('');
-    tabs.querySelectorAll('[data-mp]').forEach(b => b.onclick = () => {
-      if (mpModificato && !confirm('Ci sono modifiche non salvate nella scheda: le perdi?')) return;
-      mpModificato = false; mpMenuAttivo = b.dataset.mp; mpDisegnaTabs();
-    });
+    // le linguette sono quelle della sezione Menu: aggiorno solo i contatori e la scheda
+    document.querySelectorAll('#mn-tabs [data-mn]').forEach(b => { const sm = b.querySelector('small'); if (sm) sm.textContent = (tvSchedeCache[b.dataset.mn] || []).length; });
     document.getElementById('mp-box').style.display = mpMenuAttivo ? '' : 'none';
     mpDisegna();
   }
@@ -5189,7 +5214,7 @@ const ICONE_CATEGORIA_BASE64 = {
     if (!error && righe.length) ({ error } = await sbClient.from('menu_tavolo_prodotti').insert(righe));
     if (error) { alert('Errore nel salvataggio: ' + error.message); b.disabled = false; b.textContent = 'Salva scheda *'; return; }
     mpModificato = false; b.textContent = 'Scheda salvata ✓'; setTimeout(() => { b.textContent = 'Salva scheda'; }, 2000);
-    tvCaricaMenu();
+    mpDisegnaTabs();
   });
 
   // ---------- tavoli e QR ----------
