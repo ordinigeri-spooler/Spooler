@@ -267,28 +267,73 @@ async function caricaCatalogo() {
 
 // ---------- regole del menu (le stesse controllate dal database) ----------
 function personeSessione() { const s = info.sessione; return (s.adulti || 0) + (s.bambini || 0); }
+// Il menu può essere "per piatti" (tab in admin: lista prodotti, a pagamento/compreso,
+// scelte comprese, menu fisso) oppure "per categorie" (vecchio modo). Le stesse regole
+// sono controllate dal database all'invio: qui servono solo per guidare il cliente.
+const perPiatti = () => !!(menuCorrente && menuCorrente.prodotti && menuCorrente.prodotti.length);
+const rigaMenu = p => perPiatti() ? menuCorrente.prodotti.find(x => x.id === p.id) : null;
+const menuIncluso = () => ['ayce', 'fisso'].includes(info.sessione.menu_tipo);
+/** "Bevande incluse": i prodotti segnati bevanda inclusa, con un tetto a persona per tutto il pasto (menu fisso). */
+function scelte() {
+  if (!perPiatti() || !menuIncluso() || menuCorrente.bevande_incluse_persona === null || menuCorrente.bevande_incluse_persona === undefined) return [];
+  const ids = menuCorrente.prodotti.filter(x => x.incluso && x.bevanda_inclusa).map(x => x.id);
+  return ids.length ? [{ id: 'bevande', nome: 'Bevanda inclusa', prodotti: ids, quantita_persona: menuCorrente.bevande_incluse_persona }] : [];
+}
+function sceltaDi(p) { return scelte().find(sc => sc.prodotti.includes(p.id)) || null; }
 function infoCategoria(catId) {
   const lista = menuCorrente ? menuCorrente.categorie : [];
   if (!lista.length) return { visibile: true, compresa: false };     // menu senza categorie = tutto a prezzo pieno
   const c = lista.find(x => x.id === catId);
-  return c ? { visibile: true, compresa: info.sessione.menu_tipo === 'ayce' && c.compresa } : { visibile: false, compresa: false };
+  return c ? { visibile: true, compresa: menuIncluso() && c.compresa } : { visibile: false, compresa: false };
 }
-const eCompreso = p => infoCategoria(p.categoria_id).compresa;
-function limiteProdotto(p) { return eCompreso(p) && p.max_pezzi_persona ? p.max_pezzi_persona * personeSessione() : null; }
-function limiteComanda() { return info.max_pezzi_persona_comanda ? info.max_pezzi_persona_comanda * personeSessione() : null; }
+/** Il prodotto è visibile in questo menu? */
+function visibile(p) {
+  if (sceltaDi(p)) return true;
+  if (perPiatti()) return !!rigaMenu(p);
+  return infoCategoria(p.categoria_id).visibile;
+}
+/** Compreso nel menu (0 euro, conta per i limiti). I prodotti di una scelta compresa sono gestiti a parte. */
+function eCompreso(p) {
+  if (sceltaDi(p)) return false;
+  if (perPiatti()) { const r = rigaMenu(p); return !!r && menuIncluso() && r.incluso; }
+  return infoCategoria(p.categoria_id).compresa;
+}
+/** Prezzo pieno del prodotto in questo menu (quello del tab se indicato). */
+function prezzoMenu(p) { const r = rigaMenu(p); return r && r.prezzo !== null && r.prezzo !== undefined ? Number(r.prezzo) : Number(p.prezzo_base); }
+function maxPiatto(p) { const r = rigaMenu(p); return r && r.max_pezzi_persona ? r.max_pezzi_persona : p.max_pezzi_persona; }
+function limiteProdotto(p) { return eCompreso(p) && maxPiatto(p) ? maxPiatto(p) * personeSessione() : null; }
+function limiteComanda() { const n = info.max_pezzi_persona_comanda; return n ? n * personeSessione() : null; }
+function limiteFisso() { return menuCorrente && menuCorrente.limite_piatti_persona ? menuCorrente.limite_piatti_persona * personeSessione() : null; }
+function fissiUsati() { return Number((info.sessione || {}).piatti_usati || 0); }
+function scelteUsate(sc) { return Number((info.sessione || {}).bevande_usate || 0); }
 function pezziProdotto(id) { return carrello.filter(r => r.prodotto_id === id).reduce((s, r) => s + r.quantita, 0); }
 function pezziCompresi() { return carrello.filter(r => { const p = prodotto(r.prodotto_id); return p && eCompreso(p); }).reduce((s, r) => s + r.quantita, 0); }
+/** Pezzi nel carrello dei prodotti di una scelta compresa. */
+function pezziScelta(sc) { return carrello.filter(r => sc.prodotti.includes(r.prodotto_id)).reduce((s, r) => s + r.quantita, 0); }
+/** Quante unità di questa scelta sono ancora comprese (pasto intero meno usate meno carrello). */
+function residuoScelta(sc) { return Math.max(0, sc.quantita_persona * personeSessione() - scelteUsate(sc) - pezziScelta(sc)); }
 const prodotto = id => catalogo.prodotti.find(p => p.id === id);
 function prezzoRiga(r) {
-  const p = prodotto(r.prodotto_id); if (!p || eCompreso(p)) return 0;
-  return (Number(p.prezzo_base) + r.opzioni.reduce((s, o) => s + o.prezzo, 0)) * r.quantita;
+  const p = prodotto(r.prodotto_id); if (!p) return 0;
+  const sc = sceltaDi(p);
+  if (sc) {
+    // quota compresa di questa riga: le righe precedenti nel carrello consumano prima
+    const prima = carrello.slice(0, carrello.indexOf(r)).filter(x => sc.prodotti.includes(x.prodotto_id)).reduce((s, x) => s + x.quantita, 0);
+    const compresi = Math.max(0, Math.min(r.quantita, sc.quantita_persona * personeSessione() - scelteUsate(sc) - prima));
+    return (prezzoMenu(p) + r.opzioni.reduce((s, o) => s + o.prezzo, 0)) * (r.quantita - compresi);
+  }
+  if (eCompreso(p)) return 0;
+  return (prezzoMenu(p) + r.opzioni.reduce((s, o) => s + o.prezzo, 0)) * r.quantita;
 }
 /** Si può aggiungere n pezzi di p? Restituisce il messaggio di errore o null. */
 function bloccoAggiunta(p, n) {
+  if (!eCompreso(p)) return null;                       // a pagamento o scelta compresa: nessun limite
   const lp = limiteProdotto(p);
   if (lp !== null && pezziProdotto(p.id) + n > lp) return `Massimo ${lp} pezzi di "${p.nome}" per comanda`;
   const lc = limiteComanda();
-  if (eCompreso(p) && lc !== null && pezziCompresi() + n > lc) return `Massimo ${lc} pezzi per comanda (${info.max_pezzi_persona_comanda} a persona)`;
+  if (lc !== null && pezziCompresi() + n > lc) return `Massimo ${lc} piatti per comanda`;
+  const lf = limiteFisso();
+  if (lf !== null && fissiUsati() + pezziCompresi() + n > lf) return `Il menu comprende ${lf} piatti in tutto: ne avete già scelti ${fissiUsati() + pezziCompresi()}`;
   return null;
 }
 
@@ -302,21 +347,23 @@ function disegnaApertura() {
   const menu = info.menu || [];
   $('lista-menu').innerHTML = menu.length ? menu.map(m => `
     <button class="menu-scelta ${menuScelto === m.id ? 'sel' : ''}" data-menu="${m.id}">
-      <div class="t"><b>${esc(m.nome)}</b><span class="p">${m.tipo === 'ayce' ? euro(m.prezzo_adulto) + ' <small>a persona</small>' : 'Alla carta'}</span></div>
-      ${m.tipo === 'ayce' && Number(m.prezzo_bambino) ? `<div class="d">Bambini ${euro(m.prezzo_bambino)}</div>` : ''}
+      <div class="t"><b>${esc(m.nome)}</b><span class="p">${m.tipo !== 'carta' ? euro(m.prezzo_adulto) + ' <small>a persona</small>' : Number(m.prezzo_adulto) ? 'Coperto ' + euro(m.prezzo_adulto) : 'Alla carta'}</span></div>
+      ${m.tipo === 'fisso' && (m.limite_piatti_persona || m.bevande_incluse_persona) ? `<div class="d">${[m.limite_piatti_persona ? m.limite_piatti_persona + ' piatti a scelta' : '', m.bevande_incluse_persona ? m.bevande_incluse_persona + (m.bevande_incluse_persona === 1 ? ' bevanda inclusa' : ' bevande incluse') : ''].filter(Boolean).join(' + ')} a persona</div>` : ''}
+      ${Number(m.prezzo_bambino) && Number(m.prezzo_bambino) !== Number(m.prezzo_adulto) ? `<div class="d">Bambini ${euro(m.prezzo_bambino)}</div>` : ''}
       ${m.descrizione ? `<div class="d">${esc(m.descrizione)}</div>` : ''}
     </button>`).join('') : '<p class="muted">Nessun menu disponibile in questo momento. Chiedi al personale.</p>';
   document.querySelectorAll('[data-menu]').forEach(b => b.onclick = () => { menuScelto = b.dataset.menu; disegnaApertura(); });
   const m = menu.find(x => x.id === menuScelto);
-  const tot = m && m.tipo === 'ayce' ? persone.adulti * m.prezzo_adulto + persone.bambini * m.prezzo_bambino : 0;
-  $('totale-apertura').innerHTML = m && m.tipo === 'ayce' ? `Totale menu: <b>${euro(tot)}</b>` : '';
+  const tot = m ? persone.adulti * m.prezzo_adulto + persone.bambini * m.prezzo_bambino : 0;
+  $('totale-apertura').innerHTML = m && tot > 0 ? `${m.tipo !== 'carta' ? 'Totale menu' : 'Totale coperti'}: <b>${euro(tot)}</b>` : '';
   $('btn-inizia').disabled = !m || persone.adulti + persone.bambini < 1;
 }
 document.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { persone[b.dataset.p] = Math.max(0, persone[b.dataset.p] + Number(b.dataset.d)); disegnaApertura(); });
 $('btn-inizia').onclick = async () => {
   const m = info.menu.find(x => x.id === menuScelto);
   const pers = persone.adulti + persone.bambini;
-  if (!confirm(`Confermi ${m.nome} per ${pers} ${pers === 1 ? 'persona' : 'persone'}?` + (m.tipo === 'ayce' ? `\nTotale menu ${euro(persone.adulti * m.prezzo_adulto + persone.bambini * m.prezzo_bambino)}` : ''))) return;
+  const totMenu = persone.adulti * m.prezzo_adulto + persone.bambini * m.prezzo_bambino;
+  if (!confirm(`Confermi ${m.nome} per ${pers} ${pers === 1 ? 'persona' : 'persone'}?` + (totMenu > 0 ? `\n${m.tipo !== 'carta' ? 'Totale menu' : 'Totale coperti'} ${euro(totMenu)}` : ''))) return;
   $('btn-inizia').disabled = true;
   try {
     info = await rpc('tavolo_apri', { p_tenant: TENANT, p_tavolo: TAVOLO, p_menu: menuScelto, p_adulti: persone.adulti, p_bambini: persone.bambini });
@@ -340,8 +387,8 @@ async function entraNelMenu() {
 }
 
 function disegnaMenu() {
-  const cats = catalogo.categorie.filter(c => infoCategoria(c.id).visibile)
-    .map(c => ({ ...c, prodotti: catalogo.prodotti.filter(p => p.categoria_id === c.id) }))
+  const cats = catalogo.categorie
+    .map(c => ({ ...c, prodotti: catalogo.prodotti.filter(p => p.categoria_id === c.id && visibile(p)) }))
     .filter(c => c.prodotti.length);
   $('tabs-cat').innerHTML = cats.map((c, i) => `<button class="${i ? '' : 'on'}" data-vai="${c.id}">${esc(c.nome)}</button>`).join('');
   $('lista-prodotti').innerHTML = cats.length ? cats.map(c => `
@@ -369,15 +416,27 @@ function schedaProdotto(p) {
     <div class="info">
       <div class="nome">${esc(p.nome)}</div>
       ${p.descrizione ? `<div class="desc">${esc(p.descrizione)}</div>` : ''}
-      <div class="riga-prezzo">${compreso ? '<span class="incluso">Incluso nel menu</span>' : `<span class="prezzo">${euro(p.prezzo_base)}</span>`}
+      <div class="riga-prezzo">${etichettaPrezzo(p)}
         ${lp ? `<span class="limite">max ${lp} a comanda</span>` : ''}</div>
     </div>
     <div class="agg">${controllo}</div>
   </div>`;
 }
+function etichettaPrezzo(p) {
+  const sc = sceltaDi(p);
+  if (sc) {
+    const res = residuoScelta(sc);
+    return res > 0 ? `<span class="incluso">${esc(sc.nome)} · ${res} ancora ${res === 1 ? 'compresa' : 'comprese'}</span>` : `<span class="prezzo">${euro(prezzoMenu(p))}</span> <span class="limite">${esc(sc.nome)} esaurita</span>`;
+  }
+  return eCompreso(p) ? '<span class="incluso">Incluso nel menu</span>' : `<span class="prezzo">${euro(prezzoMenu(p))}</span>`;
+}
 function ridisegnaScheda(id) {
-  const el = document.getElementById('prod-' + id); if (!el) return;
-  el.outerHTML = schedaProdotto(prodotto(id));
+  const p = prodotto(id); if (!p) return;
+  const sc = sceltaDi(p);
+  for (const pid of sc ? sc.prodotti : [id]) {
+    const el = document.getElementById('prod-' + pid); if (!el) continue;
+    el.outerHTML = schedaProdotto(prodotto(pid));
+  }
   collegaSchede();
 }
 function collegaSchede() {
@@ -429,7 +488,7 @@ function apriProdotto(id) {
     const max = g.max_scelte || 1, min = g.min_scelte || (g.obbligatorio ? 1 : 0);
     const tipo = max === 1 ? 'radio' : 'checkbox';
     return `<div class="gruppo" data-g="${g.id}"><div class="gt">${esc(g.nome_gruppo)}<small id="gs-${g.id}">${regolaGruppo(min, max)}</small></div>
-      ${g.opzioni.map(o => `<label class="opz"><input type="${tipo}" name="g-${g.id}" value="${o.id}"> ${esc(o.nome)}${!compreso && o.prezzo ? `<span class="pz">+${euro(o.prezzo)}</span>` : ''}</label>`).join('')}
+      ${g.opzioni.map(o => `<label class="opz"><input type="${tipo}" name="g-${g.id}" value="${o.id}"> ${esc(o.nome)}${!compreso && !sceltaDi(p) && o.prezzo ? `<span class="pz">+${euro(o.prezzo)}</span>` : ''}</label>`).join('')}
     </div>`;
   }).join('');
   $('fp-corpo').querySelectorAll('input').forEach(inp => inp.onchange = () => {
@@ -456,7 +515,9 @@ function aggiornaFp() {
     if (n < min) ok = false;
   }
   $('fp-q').textContent = fp.q;
-  const prezzo = eCompreso(p) ? 0 : (Number(p.prezzo_base) + opzioniScelte().reduce((s, o) => s + o.prezzo, 0)) * fp.q;
+  const sc = sceltaDi(p);
+  const pagati = sc ? Math.max(0, fp.q - residuoScelta(sc)) : (eCompreso(p) ? 0 : fp.q);
+  const prezzo = (prezzoMenu(p) + opzioniScelte().reduce((s, o) => s + o.prezzo, 0)) * pagati;
   $('fp-aggiungi').textContent = ok ? (prezzo ? `Aggiungi · ${euro(prezzo)}` : 'Aggiungi') : 'Completa le scelte';
   $('fp-aggiungi').disabled = !ok;
 }
@@ -488,7 +549,7 @@ function disegnaCarrello() {
       ${r.opzioni.length ? `<div class="opz-txt">${r.opzioni.map(o => esc(o.nome)).join(' · ')}</div>` : ''}
       <div class="opz-txt">${pr ? euro(pr) : 'Incluso'}</div></div>
       <div class="stepper"><button data-cm="${i}" data-d="-1">−</button><span>${r.quantita}</span><button data-cm="${i}" data-d="1">+</button></div></div>`;
-  }).join('') + (lc !== null ? `<div class="riepilogo-limiti">Piatti del menu in questa comanda: <b>${pezziCompresi()}</b> su ${lc}</div>` : '');
+  }).join('') + riepilogoLimiti();
   $('carr-corpo').querySelectorAll('[data-cm]').forEach(b => b.onclick = () => {
     const r = carrello[Number(b.dataset.cm)], d = Number(b.dataset.d);
     if (d > 0) { const bl = bloccoAggiunta(prodotto(r.prodotto_id), 1); if (bl) { toast(bl, true); return; } }
@@ -516,6 +577,18 @@ $('btn-invia').onclick = async () => {
   } finally { $('btn-invia').textContent = 'Invia comanda'; disegnaCarrello(); }
 };
 
+function riepilogoLimiti() {
+  const righe = [];
+  const lc = limiteComanda(), lf = limiteFisso();
+  if (lc !== null) righe.push(`Piatti del menu in questa comanda: <b>${pezziCompresi()}</b> su ${lc}`);
+  if (lf !== null) righe.push(`Piatti del menu nel pasto: <b>${fissiUsati() + pezziCompresi()}</b> su ${lf}`);
+  for (const sc of scelte()) {
+    const tot = sc.quantita_persona * personeSessione();
+    righe.push(`${esc(sc.nome)}: <b>${Math.min(tot, scelteUsate(sc) + pezziScelta(sc))}</b> su ${tot} comprese${scelteUsate(sc) + pezziScelta(sc) > tot ? `, ${scelteUsate(sc) + pezziScelta(sc) - tot} a pagamento` : ''}`);
+  }
+  return righe.length ? `<div class="riepilogo-limiti">${righe.join('<br>')}</div>` : '';
+}
+
 // ---------- tempo per il riordino ----------
 let scartoOrologio = 0; // differenza tra orologio del telefono e del server
 function secondiAttesa() {
@@ -531,8 +604,10 @@ function aggiornaStato() {
     if (s > 0) { el.className = 'stato attesa'; el.innerHTML = `<span>⏳</span><span>Prossima comanda tra <b>${formattaAttesa(s)}</b><br><small class="muted">Intanto puoi preparare la prossima</small></span>`; }
     else {
       el.className = 'stato';
-      const lc = limiteComanda();
-      el.innerHTML = `<span>✅</span><span>Puoi inviare una comanda` + (lc ? ` · fino a <b>${lc}</b> piatti del menu` : '') + '</span>';
+      const lc = limiteComanda(), lf = limiteFisso();
+      let testo = 'Puoi inviare una comanda' + (lc ? ` · fino a <b>${lc}</b> piatti del menu` : '');
+      if (lf !== null) testo += `<br><small class="muted">Piatti del menu usati: <b>${fissiUsati()}</b> su ${lf}</small>`;
+      el.innerHTML = `<span>✅</span><span>${testo}</span>`;
       if (timerConto) { clearInterval(timerConto); timerConto = null; }
     }
     if (!$('velo-carrello').classList.contains('hidden')) {
@@ -550,7 +625,7 @@ function disegnaComande() {
   $('n-comande').textContent = c.length ? `(${c.length})` : '';
   $('sotto-comande').innerHTML = c.length ? c.slice().reverse().map(k => `
     <div class="comanda-storico"><div class="t"><span>Comanda ${k.numero}</span><span class="muted" style="font-family:'Segoe UI';font-weight:600">${new Date(k.creato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span></div>
-      <ul>${(k.righe || []).map(r => `<li>${r.quantita}× ${esc(r.nome)}${(r.opzioni || []).length ? ` <small>(${r.opzioni.map(o => esc(o.nome)).join(', ')})</small>` : ''}</li>`).join('')}</ul></div>`).join('')
+      <ul>${(k.righe || []).map(r => `<li>${r.quantita}× ${esc(r.nome)}${(r.opzioni || []).length ? ` <small>(${r.opzioni.map(o => esc(o.nome)).join(', ')})</small>` : ''}${Number(r.prezzo) ? ` <small>${euro(r.prezzo)}</small>` : ''}</li>`).join('')}</ul></div>`).join('')
     : '<div class="vuoto">Non avete ancora inviato comande.</div>';
 }
 document.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => {

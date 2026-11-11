@@ -481,13 +481,45 @@
       <div id="tv-lista-menu"></div>
 
       <div class="section-header" style="margin-top:26px;">
+        <h2 style="font-size:20px;">Prodotti dei menu</h2>
+        <button type="button" class="secondary" id="mp-salva" disabled>Salva scheda</button>
+      </div>
+      <p class="tv-hint" style="margin-top:-8px;">Una scheda per ogni menu. Carica i PLU (anche tutti), poi per ognuno: <b>Incluso</b> = a 0 € (pagato col menu) oppure a pagamento col suo <b>prezzo</b>; <b>Max/pers.</b> = pezzi per comanda a persona; <b>Bevanda incl.</b> = conta tra le bevande incluse del menu. Se la scheda ha prodotti, le categorie del menu non vengono più usate.</p>
+      <div class="mp-tabs" id="mp-tabs"></div>
+      <div class="tv-box" id="mp-box" style="border-top-left-radius:0; display:none;">
+        <div class="mp-toolbar">
+          <input type="text" id="mp-cerca" placeholder="Cerca nella scheda" style="margin:0; max-width:220px;">
+          <select id="mp-aggiungi-cat" style="margin:0; max-width:260px;"><option value="">+ Aggiungi categoria…</option></select>
+          <button type="button" class="secondary" id="mp-aggiungi-tutti">+ Aggiungi tutti i prodotti</button>
+          <button type="button" class="secondary" id="mp-tutti-inclusi">Tutti inclusi</button>
+          <button type="button" class="secondary" id="mp-tutti-pagamento">Tutti a pagamento</button>
+          <button type="button" class="danger" id="mp-svuota">Svuota scheda</button>
+        </div>
+        <div class="mp-riepilogo tv-hint" id="mp-riepilogo"></div>
+        <div class="mp-tabella-wrap"><table class="mp-tabella" id="mp-tabella">
+          <thead><tr><th>Prodotto</th><th>Categoria</th><th title="Compreso nel prezzo del menu (0 €)">Incluso</th><th>Prezzo €</th><th title="Pezzi per comanda, a persona">Max/pers.</th><th title="Conta tra le bevande incluse del menu">Bevanda incl.</th><th></th></tr></thead>
+          <tbody id="mp-corpo"></tbody>
+        </table></div>
+      </div>
+
+      <div class="section-header" style="margin-top:26px;">
+        <h2 style="font-size:20px;">Coperti (PLU di Geri)</h2>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="tv-cerca-plu" placeholder="Cerca per nome o codice" style="width:210px; margin:0;">
+          <label style="display:flex; align-items:center; gap:6px; margin:0; font-size:13px;"><input type="checkbox" id="tv-solo-coperti" style="width:auto; margin:0;" checked> Solo coperti</label>
+        </div>
+      </div>
+      <p class="tv-hint" style="margin-top:-8px;">L'elenco arriva da Geri con lo spooler ("Importa catalogo sul sito"), con nome e prezzo. Spunta "È un coperto" per i PLU da usare come coperto adulto/bambino nei menu. Togli "Solo coperti" per vedere tutti i PLU.</p>
+      <div id="tv-lista-plu" class="tv-categorie" style="max-height:320px; margin-bottom:6px;"></div>
+
+      <div class="section-header" style="margin-top:26px;">
         <h2 style="font-size:20px;">Tavoli e QR code</h2>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="secondary" id="btn-nuovo-tavolo">+ Tavolo</button>
           <button type="button" id="btn-stampa-qr">🖨️ Stampa QR</button>
         </div>
       </div>
-      <p class="tv-hint" style="margin-top:-8px;">I tavoli si importano da Geri con lo spooler ("Importa catalogo sul sito"). Ogni QR apre l'ordinazione di quel tavolo.</p>
+      <p class="tv-hint" style="margin-top:-8px;">I tavoli si scelgono dallo spooler, sezione "Tavoli per i QR" (legge i tavoli di Geri). Ogni QR apre l'ordinazione di quel tavolo.</p>
       <div id="tv-lista-tavoli" class="tv-tavoli"></div>
     </section>
 
@@ -4735,6 +4767,7 @@ const ICONE_CATEGORIA_BASE64 = {
       <label for="mt-tipo">Tipo</label>
       <select id="mt-tipo">
         <option value="ayce">All you can eat (prezzo a persona, piatti compresi a 0 €)</option>
+        <option value="fisso">Menu fisso (prezzo a persona, N piatti a scelta + bevanda)</option>
         <option value="carta">Alla carta (piatti a prezzo pieno)</option>
       </select>
       <label for="mt-descrizione">Descrizione (facoltativa)</label>
@@ -4748,20 +4781,24 @@ const ICONE_CATEGORIA_BASE64 = {
       </div>
       <p class="tv-hint">Lascia vuoto per renderlo sempre disponibile. Es. pranzo 11:30–15:00, cena 18:30–23:30.</p>
 
-      <div id="mt-blocco-prezzi">
-        <div class="row-2">
-          <div><label for="mt-prezzo-adulto">Prezzo adulto €</label><input type="number" step="0.01" min="0" id="mt-prezzo-adulto"></div>
-          <div><label for="mt-prezzo-bambino">Prezzo bambino €</label><input type="number" step="0.01" min="0" id="mt-prezzo-bambino"></div>
-        </div>
+      <div class="row-2">
+        <div><label for="mt-plu-adulto">Coperto adulto</label><select id="mt-plu-adulto"></select></div>
+        <div><label for="mt-plu-bambino">Coperto bambino</label><select id="mt-plu-bambino"></select></div>
       </div>
       <div class="row-2">
-        <div><label for="mt-plu-adulto">PLU Geri adulto</label><input type="number" min="1" id="mt-plu-adulto" placeholder="codice piatto in Geri"></div>
-        <div><label for="mt-plu-bambino">PLU Geri bambino</label><input type="number" min="1" id="mt-plu-bambino" placeholder="vuoto = come adulto"></div>
+        <div><label for="mt-prezzo-adulto">Prezzo adulto €</label><input type="number" step="0.01" min="0" id="mt-prezzo-adulto"></div>
+        <div><label for="mt-prezzo-bambino">Prezzo bambino €</label><input type="number" step="0.01" min="0" id="mt-prezzo-bambino"></div>
       </div>
-      <p class="tv-hint">All'apertura del tavolo lo spooler scrive su Geri il PLU × persone (es. 2× adulto + 1× bambino). Per l'alla carta puoi indicare il PLU del coperto, oppure lasciare vuoto.</p>
+      <p class="tv-hint">I coperti sono i PLU di Geri spuntati come "coperto" (riquadro Coperti qui sotto). Scegliendo un coperto il prezzo viene preso da Geri; se in Geri cambia, si aggiorna al prossimo "Importa catalogo". All'apertura del tavolo lo spooler scrive su Geri il coperto × persone (es. 2× adulto + 1× bambino). Nell'alla carta puoi scegliere il coperto o lasciare "nessuno".</p>
 
-      <label>Categorie del menu</label>
-      <p class="tv-hint" style="margin-top:0;">Spunta le categorie visibili. Nell'all you can eat togli "compresa" a quelle che si pagano a parte (es. bevande). Nessuna spunta in un menu alla carta = tutte le categorie.</p>
+      <div class="row-2" id="mt-blocco-limiti">
+        <div><label for="mt-limite-piatti">Piatti inclusi a persona (totale menu)</label><input type="number" min="1" id="mt-limite-piatti" placeholder="vuoto = illimitati (AYCE)"></div>
+        <div><label for="mt-bevande-incluse">Bevande incluse a persona</label><input type="number" min="0" id="mt-bevande-incluse" placeholder="vuoto = nessun limite"></div>
+      </div>
+      <p class="tv-hint">Menu fisso: es. 10 piatti a scelta e 1 bevanda a persona per tutta la permanenza; oltre, le bevande "incluse" si pagano. Le bevande incluse si segnano nella scheda prodotti del menu.</p>
+
+      <label>Categorie del menu <span style="font-weight:400; opacity:.7;">(modo semplice: usato solo se la scheda prodotti del menu è vuota)</span></label>
+      <p class="tv-hint" style="margin-top:0;">Spunta le categorie visibili. Nell'all you can eat togli "compresa" a quelle che si pagano a parte (es. bevande). Nessuna spunta in un menu alla carta = tutte le categorie. <b>Se nel tab del menu scegli i piatti uno per uno, le categorie non contano più.</b></p>
       <div id="mt-categorie" class="tv-categorie"></div>
 
       <div class="row-2">
@@ -4777,6 +4814,7 @@ const ICONE_CATEGORIA_BASE64 = {
     </form>
   </div>
 </div>
+
 
 <div class="modal-backdrop" id="modal-qr-tavolo">
   <div class="modal" style="max-width:420px; text-align:center;">
@@ -4806,6 +4844,35 @@ const ICONE_CATEGORIA_BASE64 = {
   .tv-categorie .r:last-child { border-bottom: 0; }
   .tv-categorie .r input { width: auto; margin: 0; }
   .tv-categorie .r .comp { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-dim); }
+  #sc-prodotti .r.nascosto { display: none; }
+  .tv-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tv-tabs button { padding: 8px 14px; border-radius: 99px; }
+  .tv-tabs button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tv-regole { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; align-items: end; }
+  .tv-cat-blocco { border: 1px solid var(--border); border-radius: 10px; margin-top: 10px; overflow: hidden; }
+  .tv-cat-testa { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(127,127,127,.08); font-weight: 700; }
+  .tv-cat-testa .sp { flex: 1; }
+  .tv-cat-testa button { padding: 4px 10px; font-size: 12px; }
+  .tv-piatto { display: grid; grid-template-columns: 24px minmax(0,1fr) 110px 90px 90px; gap: 8px; align-items: center; padding: 7px 12px; border-top: 1px solid var(--border); font-size: 13.5px; }
+  .tv-piatto input[type=checkbox] { width: auto; margin: 0; }
+  .tv-piatto input[type=number] { padding: 5px 8px; margin: 0; font-size: 13px; }
+  .tv-piatto .pg { display: flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; margin: 0; }
+  .tv-piatto.off { opacity: .55; }
+  .tv-piatto .nm small { color: var(--ink-dim); }
+  .tv-intesta { display: grid; grid-template-columns: 24px minmax(0,1fr) 110px 90px 90px; gap: 8px; padding: 4px 12px; font-size: 11.5px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .4px; }
+  @media (max-width: 760px) { .tv-piatto, .tv-intesta { grid-template-columns: 24px minmax(0,1fr) 90px; } .tv-piatto .c4, .tv-piatto .c5, .tv-intesta .c4, .tv-intesta .c5 { display: none; } }
+  .mp-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: -1px; position: relative; z-index: 1; }
+  .mp-tab { background: var(--panel-2, var(--bg)); border: 1px solid var(--border); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 9px 14px; color: var(--ink); cursor: pointer; font: inherit; }
+  .mp-tab small { opacity: .6; margin-left: 4px; }
+  .mp-tab.on { background: var(--panel); border-color: var(--accent, #e2604f); color: var(--accent, #e2604f); font-weight: 700; }
+  .mp-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .mp-tabella-wrap { overflow: auto; max-height: 520px; border: 1px solid var(--border); border-radius: 10px; }
+  .mp-tabella { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .mp-tabella th { position: sticky; top: 0; background: var(--panel); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 12px; text-transform: uppercase; letter-spacing: .4px; opacity: .8; }
+  .mp-tabella td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .mp-tabella tr.off td { opacity: .5; }
+  .mp-tabella input[type=checkbox] { width: 18px; height: 18px; margin: 0; }
+  .mp-tabella td button { padding: 3px 8px; font-size: 12px; }
   .tv-tavoli { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
   .tv-tavolo { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px; text-align: center; }
   .tv-tavolo .n { font-size: 22px; font-weight: 800; }
@@ -4824,7 +4891,9 @@ const ICONE_CATEGORIA_BASE64 = {
   const tvOra = t => (t || '').slice(0, 5);
 
   async function caricaTavoliAyce() {
+    await tvCaricaPlu();
     await Promise.all([tvCaricaImpostazioni(), tvCaricaMenu(), tvCaricaTavoli(), tvCaricaSessioni()]);
+    await mpCarica();
   }
 
   // ---------- regole ----------
@@ -4877,9 +4946,54 @@ const ICONE_CATEGORIA_BASE64 = {
   };
 
   // ---------- menu ----------
+  // ---------- coperti (PLU di Geri) ----------
+  let tvPluCache = [];
+  const tvPlu = cod => tvPluCache.find(p => p.codice_geri === Number(cod));
+  async function tvCaricaPlu() {
+    const { data, error } = await sbClient.from('plu_geri').select('id, codice_geri, nome, prezzo, categoria, e_coperto').eq('tenant_id', currentTenantId).order('nome');
+    tvPluCache = error ? [] : data;
+    tvDisegnaPlu();
+  }
+  function tvDisegnaPlu() {
+    const q = (document.getElementById('tv-cerca-plu').value || '').trim().toLowerCase();
+    const solo = document.getElementById('tv-solo-coperti').checked;
+    const lista = tvPluCache.filter(p => (!solo || p.e_coperto) && (!q || p.nome.toLowerCase().includes(q) || String(p.codice_geri) === q))
+      .sort((a, b) => (b.e_coperto - a.e_coperto) || a.nome.localeCompare(b.nome));
+    document.getElementById('tv-lista-plu').innerHTML = !tvPluCache.length
+      ? '<div class="r">Nessun PLU: dallo spooler premi "Importa catalogo sul sito".</div>'
+      : !lista.length ? `<div class="r">${solo ? 'Nessun PLU spuntato come coperto: togli "Solo coperti" e spunta quelli giusti.' : 'Nessun risultato.'}</div>`
+      : lista.map(p => `<div class="r"><b style="min-width:52px;">${p.codice_geri}</b> ${escapeHtml(p.nome)} <span class="tv-hint" style="margin:0;">${escapeHtml(p.categoria || '')}</span>
+          <span style="margin-left:auto; font-weight:700;">${tvEuro(p.prezzo)}</span>
+          <label class="comp" style="margin-left:14px; display:flex;"><input type="checkbox" ${p.e_coperto ? 'checked' : ''} onchange="tvSegnaCoperto('${p.id}', this.checked)"> È un coperto</label></div>`).join('');
+  }
+  window.tvSegnaCoperto = async function(id, valore) {
+    const { error } = await sbClient.from('plu_geri').update({ e_coperto: valore }).eq('id', id);
+    if (error) { alert('Errore: ' + error.message); return; }
+    const p = tvPluCache.find(x => x.id === id); if (p) p.e_coperto = valore;
+    tvDisegnaPlu();
+  };
+  document.getElementById('tv-cerca-plu').addEventListener('input', tvDisegnaPlu);
+  document.getElementById('tv-solo-coperti').addEventListener('change', tvDisegnaPlu);
+  function tvOpzioniCoperti(selezionato) {
+    const coperti = tvPluCache.filter(p => p.e_coperto);
+    let html = '<option value="">— nessuno —</option>' + coperti.map(p => `<option value="${p.codice_geri}">${escapeHtml(p.nome)} — ${tvEuro(p.prezzo)} (cod. ${p.codice_geri})</option>`).join('');
+    // un PLU già scelto che non è (più) segnato come coperto resta selezionabile
+    if (selezionato && !coperti.some(p => p.codice_geri === Number(selezionato))) {
+      const p = tvPlu(selezionato);
+      html += `<option value="${selezionato}">${p ? escapeHtml(p.nome) + ' — ' + tvEuro(p.prezzo) : 'PLU'} (cod. ${selezionato})</option>`;
+    }
+    return html;
+  }
+  ['adulto', 'bambino'].forEach(chi => document.getElementById('mt-plu-' + chi).addEventListener('change', e => {
+    const p = tvPlu(e.target.value);
+    if (p) document.getElementById('mt-prezzo-' + chi).value = Number(p.prezzo).toFixed(2);
+    else if (!e.target.value && document.getElementById('mt-tipo').value === 'carta') document.getElementById('mt-prezzo-' + chi).value = '0.00';
+  }));
+  const tvNomeCoperto = cod => { if (!cod) return '—'; const p = tvPlu(cod); return p ? escapeHtml(p.nome) : 'cod. ' + cod; };
+
   async function tvCaricaMenu() {
     const [m, c] = await Promise.all([
-      sbClient.from('menu_tavolo').select('*, menu_tavolo_categorie(categoria_id, compresa)').eq('tenant_id', currentTenantId).order('ordine_visualizzazione').order('nome'),
+      sbClient.from('menu_tavolo').select('*, menu_tavolo_categorie(categoria_id, compresa), menu_tavolo_prodotti(prodotto_id)').eq('tenant_id', currentTenantId).order('ordine_visualizzazione').order('nome'),
       sbClient.from('categorie').select('id, nome, ordine_visualizzazione').eq('tenant_id', currentTenantId).order('ordine_visualizzazione'),
     ]);
     const cont = document.getElementById('tv-lista-menu');
@@ -4894,11 +5008,10 @@ const ICONE_CATEGORIA_BASE64 = {
         return cat ? escapeHtml(cat.nome) + (x.tipo === 'ayce' && !mc.compresa ? ' (a pagamento)' : '') : null;
       }).filter(Boolean);
       return `<div class="list-item" ${x.attivo ? '' : 'style="opacity:.55"'}><div class="item-main"><div class="item-info">
-          <div class="name">${escapeHtml(x.nome)} <span class="badge">${x.tipo === 'ayce' ? 'All you can eat' : 'Alla carta'}</span>${x.attivo ? '' : ' <span class="badge">non attivo</span>'}</div>
+          <div class="name">${escapeHtml(x.nome)} <span class="badge">${x.tipo === 'ayce' ? 'All you can eat' : x.tipo === 'fisso' ? 'Menu fisso' : 'Alla carta'}</span>${x.attivo ? '' : ' <span class="badge">non attivo</span>'}</div>
           <div class="meta">${giorni.length === 7 ? 'Tutti i giorni' : giorni.join(' ') || 'Nessun giorno'} · ${fascia}
-            ${x.tipo === 'ayce' ? ` · adulti ${tvEuro(x.prezzo_adulto)} · bambini ${tvEuro(x.prezzo_bambino)}` : ''}
-            · PLU ${x.plu_adulto || '—'} / ${x.plu_bambino || x.plu_adulto || '—'}</div>
-          <div class="meta">${cats.length ? 'Categorie: ' + cats.join(', ') : 'Tutte le categorie'}</div>
+            · coperto adulto ${tvNomeCoperto(x.plu_adulto)} ${tvEuro(x.prezzo_adulto)} · bambino ${x.plu_bambino ? tvNomeCoperto(x.plu_bambino) : (x.plu_adulto ? 'come adulto' : '—')} ${tvEuro(x.prezzo_bambino)}</div>
+          <div class="meta">${(x.menu_tavolo_prodotti || []).length ? `${x.menu_tavolo_prodotti.length} prodotti nella scheda` : (cats.length ? 'Categorie: ' + cats.join(', ') : 'Tutte le categorie')}${x.limite_piatti_persona ? ` · ${x.limite_piatti_persona} piatti a persona` : ''}${x.bevande_incluse_persona != null ? ` · ${x.bevande_incluse_persona} bevande incluse a persona` : ''}</div>
         </div></div>
         <div class="item-actions"><button class="secondary" onclick="tvModificaMenu('${x.id}')">Modifica</button><button class="danger" onclick="tvEliminaMenu('${x.id}')">🗑</button></div></div>`;
     }).join('');
@@ -4916,9 +5029,13 @@ const ICONE_CATEGORIA_BASE64 = {
     document.getElementById('mt-ora-a').value = x ? tvOra(x.ora_a) : '';
     document.getElementById('mt-prezzo-adulto').value = x ? x.prezzo_adulto : '';
     document.getElementById('mt-prezzo-bambino').value = x ? x.prezzo_bambino : '';
+    document.getElementById('mt-plu-adulto').innerHTML = tvOpzioniCoperti(x && x.plu_adulto);
+    document.getElementById('mt-plu-bambino').innerHTML = tvOpzioniCoperti(x && x.plu_bambino);
     document.getElementById('mt-plu-adulto').value = x && x.plu_adulto ? x.plu_adulto : '';
     document.getElementById('mt-plu-bambino').value = x && x.plu_bambino ? x.plu_bambino : '';
     document.getElementById('mt-ordine').value = x ? x.ordine_visualizzazione : tvMenuCache.length;
+    document.getElementById('mt-limite-piatti').value = x && x.limite_piatti_persona ? x.limite_piatti_persona : '';
+    document.getElementById('mt-bevande-incluse').value = x && x.bevande_incluse_persona != null ? x.bevande_incluse_persona : '';
     document.getElementById('mt-attivo').checked = x ? x.attivo : true;
     const sel = new Map((x ? x.menu_tavolo_categorie || [] : []).map(mc => [mc.categoria_id, mc.compresa]));
     document.getElementById('mt-categorie').innerHTML = tvCategorieCache.length ? tvCategorieCache.map(c => `
@@ -4930,8 +5047,8 @@ const ICONE_CATEGORIA_BASE64 = {
     openModal('modal-menu-tavolo');
   }
   function tvAggiornaTipo() {
-    const ayce = document.getElementById('mt-tipo').value === 'ayce';
-    document.getElementById('mt-blocco-prezzi').style.display = ayce ? '' : 'none';
+    const ayce = document.getElementById('mt-tipo').value !== 'carta';
+    document.getElementById('mt-blocco-limiti').style.display = ayce ? '' : 'none';
     document.querySelectorAll('#mt-categorie .comp').forEach(el => el.style.display = ayce ? '' : 'none');
   }
   document.getElementById('mt-tipo').addEventListener('change', tvAggiornaTipo);
@@ -4958,29 +5075,120 @@ const ICONE_CATEGORIA_BASE64 = {
       descrizione: document.getElementById('mt-descrizione').value.trim() || null,
       giorni: Object.fromEntries([...document.querySelectorAll('[data-giorno]')].map(c => [c.dataset.giorno, c.checked])),
       ora_da: da || null, ora_a: a || null,
-      prezzo_adulto: tipo === 'ayce' ? parseFloat(document.getElementById('mt-prezzo-adulto').value) || 0 : 0,
-      prezzo_bambino: tipo === 'ayce' ? parseFloat(document.getElementById('mt-prezzo-bambino').value) || 0 : 0,
+      prezzo_adulto: parseFloat(document.getElementById('mt-prezzo-adulto').value) || 0,
+      prezzo_bambino: parseFloat(document.getElementById('mt-prezzo-bambino').value) || 0,
       plu_adulto: parseInt(document.getElementById('mt-plu-adulto').value) || null,
       plu_bambino: parseInt(document.getElementById('mt-plu-bambino').value) || null,
       ordine_visualizzazione: parseInt(document.getElementById('mt-ordine').value) || 0,
+      limite_piatti_persona: parseInt(document.getElementById('mt-limite-piatti').value) || null,
+      bevande_incluse_persona: document.getElementById('mt-bevande-incluse').value === '' ? null : Math.max(0, parseInt(document.getElementById('mt-bevande-incluse').value) || 0),
       attivo: document.getElementById('mt-attivo').checked,
     };
-    if (tipo === 'ayce' && !payload.plu_adulto) { showMsg('menu-tavolo-msg', 'Per l\'all you can eat serve il PLU di Geri dell\'adulto (è quello che finisce sul conto).', 'error'); return; }
+    if (tipo !== 'carta' && !payload.plu_adulto) { showMsg('menu-tavolo-msg', 'Per questo tipo di menu scegli il coperto adulto (è il PLU che finisce sul conto di Geri).', 'error'); return; }
     const cats = [...document.querySelectorAll('[data-cat]:checked')].map(c => ({
       categoria_id: c.dataset.cat,
-      compresa: tipo === 'ayce' ? document.querySelector(`[data-comp="${c.dataset.cat}"]`).checked : false,
+      compresa: tipo !== 'carta' ? document.querySelector(`[data-comp="${c.dataset.cat}"]`).checked : false,
     }));
-    if (tipo === 'ayce' && !cats.length) { showMsg('menu-tavolo-msg', 'Scegli almeno una categoria per l\'all you can eat.', 'error'); return; }
+    const haScheda = !!(id && (tvSchedeCache[id] || []).length);
+    if (tipo !== 'carta' && !cats.length && !haScheda) { showMsg('menu-tavolo-msg', 'Scegli almeno una categoria, oppure salva il menu e carica i prodotti nella sua scheda.', 'error'); return; }
 
     let menuId = id, error;
     if (id) ({ error } = await sbClient.from('menu_tavolo').update(payload).eq('id', id));
-    else { const r = await sbClient.from('menu_tavolo').insert(payload).select('id').single(); error = r.error; menuId = r.data && r.data.id; }
+    else { const r = await sbClient.from('menu_tavolo').insert(payload).select('id'); error = r.error; menuId = r.data && (Array.isArray(r.data) ? r.data[0] : r.data).id; }
     if (!error) {
       ({ error } = await sbClient.from('menu_tavolo_categorie').delete().eq('menu_id', menuId));
       if (!error && cats.length) ({ error } = await sbClient.from('menu_tavolo_categorie').insert(cats.map(c => ({ menu_id: menuId, ...c }))));
     }
     if (error) { showMsg('menu-tavolo-msg', 'Errore: ' + error.message, 'error'); return; }
     closeModal('modal-menu-tavolo');
+    tvCaricaMenu();
+  });
+
+  // ---------- schede prodotti per menu ----------
+  let tvSchedeCache = {};        // menu_id -> righe [{prodotto_id, incluso, prezzo, max_pezzi_persona, bevanda_inclusa}]
+  let mpProdotti = [];           // catalogo del locale
+  let mpMenuAttivo = null;
+  let mpModificato = false;
+  async function mpCarica() {
+    const ids = tvMenuCache.map(m => m.id);
+    const [righe, prod] = await Promise.all([
+      ids.length ? sbClient.from('menu_tavolo_prodotti').select('*').in('menu_id', ids).order('ordine') : Promise.resolve({ data: [] }),
+      sbClient.from('prodotti').select('id, nome, prezzo_base, attivo, categoria_id, categorie(nome, ordine_visualizzazione)').eq('tenant_id', currentTenantId).order('nome'),
+    ]);
+    mpProdotti = (prod.data || []).map(p => ({ ...p, categoria: p.categorie ? p.categorie.nome : '' }))
+      .sort((a, b) => ((a.categorie && a.categorie.ordine_visualizzazione) || 0) - ((b.categorie && b.categorie.ordine_visualizzazione) || 0) || a.nome.localeCompare(b.nome));
+    tvSchedeCache = {};
+    for (const r of righe.data || []) (tvSchedeCache[r.menu_id] = tvSchedeCache[r.menu_id] || []).push(r);
+    const sel = document.getElementById('mp-aggiungi-cat');
+    const cats = [...new Map(mpProdotti.filter(p => p.categoria_id).map(p => [p.categoria_id, p.categoria])).entries()];
+    sel.innerHTML = '<option value="">+ Aggiungi categoria…</option>' + cats.map(([id, n]) => `<option value="${id}">${escapeHtml(n)}</option>`).join('');
+    if (!tvMenuCache.some(m => m.id === mpMenuAttivo)) mpMenuAttivo = tvMenuCache.length ? tvMenuCache[0].id : null;
+    mpModificato = false;
+    mpDisegnaTabs();
+  }
+  function mpDisegnaTabs() {
+    const tabs = document.getElementById('mp-tabs');
+    tabs.innerHTML = tvMenuCache.map(m => `<button type="button" class="mp-tab ${m.id === mpMenuAttivo ? 'on' : ''}" data-mp="${m.id}">${escapeHtml(m.nome)} <small>${(tvSchedeCache[m.id] || []).length}</small></button>`).join('');
+    tabs.querySelectorAll('[data-mp]').forEach(b => b.onclick = () => {
+      if (mpModificato && !confirm('Ci sono modifiche non salvate nella scheda: le perdi?')) return;
+      mpModificato = false; mpMenuAttivo = b.dataset.mp; mpDisegnaTabs();
+    });
+    document.getElementById('mp-box').style.display = mpMenuAttivo ? '' : 'none';
+    mpDisegna();
+  }
+  const mpRighe = () => (tvSchedeCache[mpMenuAttivo] = tvSchedeCache[mpMenuAttivo] || []);
+  function mpSegna() { mpModificato = true; document.getElementById('mp-salva').disabled = false; document.getElementById('mp-salva').textContent = 'Salva scheda *'; }
+  function mpDisegna() {
+    if (!mpMenuAttivo) return;
+    const menu = tvMenuCache.find(m => m.id === mpMenuAttivo) || {};
+    const q = (document.getElementById('mp-cerca').value || '').trim().toLowerCase();
+    const righe = mpRighe();
+    const corpo = document.getElementById('mp-corpo');
+    const perId = new Map(mpProdotti.map(p => [p.id, p]));
+    const visibili = righe.map((r, i) => ({ r, i, p: perId.get(r.prodotto_id) })).filter(x => x.p && (!q || x.p.nome.toLowerCase().includes(q) || (x.p.categoria || '').toLowerCase().includes(q)));
+    corpo.innerHTML = !righe.length
+      ? `<tr><td colspan="7" class="tv-hint" style="padding:16px;">Scheda vuota: aggiungi una categoria o tutti i prodotti. ${menu.tipo === 'carta' ? 'Per l\'alla carta puoi anche lasciarla vuota (tutti i prodotti a prezzo pieno).' : 'Finché è vuota valgono le categorie del menu.'}</td></tr>`
+      : visibili.map(({ r, i, p }) => `<tr class="${p.attivo ? '' : 'off'}">
+          <td><b>${escapeHtml(p.nome)}</b>${p.attivo ? '' : ' <span class="badge">non attivo</span>'}</td>
+          <td class="tv-hint" style="margin:0;">${escapeHtml(p.categoria || '')}</td>
+          <td><input type="checkbox" data-i="${i}" data-k="incluso" ${r.incluso ? 'checked' : ''} ${menu.tipo === 'carta' ? 'disabled title="Nell\'alla carta nulla è incluso"' : ''}></td>
+          <td><input type="number" step="0.01" min="0" data-i="${i}" data-k="prezzo" value="${r.prezzo != null ? Number(r.prezzo).toFixed(2) : ''}" placeholder="${Number(p.prezzo_base).toFixed(2)}" ${r.incluso && menu.tipo !== 'carta' ? 'disabled' : ''} style="width:90px; margin:0;"></td>
+          <td><input type="number" step="1" min="1" data-i="${i}" data-k="max_pezzi_persona" value="${r.max_pezzi_persona ?? ''}" placeholder="—" style="width:70px; margin:0;"></td>
+          <td><input type="checkbox" data-i="${i}" data-k="bevanda_inclusa" ${r.bevanda_inclusa ? 'checked' : ''} ${r.incluso && menu.tipo !== 'carta' ? '' : 'disabled'}></td>
+          <td><button type="button" class="danger" data-rim="${i}" title="Togli dal menu">✕</button></td></tr>`).join('');
+    corpo.querySelectorAll('input[data-i]').forEach(inp => inp.onchange = () => {
+      const r = righe[Number(inp.dataset.i)], k = inp.dataset.k;
+      if (inp.type === 'checkbox') r[k] = inp.checked;
+      else if (k === 'prezzo') r.prezzo = inp.value === '' ? null : Math.max(0, parseFloat(inp.value) || 0);
+      else r.max_pezzi_persona = inp.value === '' ? null : Math.max(1, parseInt(inp.value) || 1);
+      if (k === 'incluso' && !r.incluso) r.bevanda_inclusa = false;
+      mpSegna(); mpDisegna();
+    });
+    corpo.querySelectorAll('[data-rim]').forEach(b => b.onclick = () => { righe.splice(Number(b.dataset.rim), 1); mpSegna(); mpDisegnaTabs(); });
+    const inclusi = righe.filter(r => r.incluso).length, bev = righe.filter(r => r.incluso && r.bevanda_inclusa).length;
+    document.getElementById('mp-riepilogo').textContent = righe.length ? `${righe.length} prodotti nella scheda · ${inclusi} inclusi (${bev} bevande incluse) · ${righe.length - inclusi} a pagamento` +
+      (menu.limite_piatti_persona ? ` · limite ${menu.limite_piatti_persona} piatti a persona` : '') + (menu.bevande_incluse_persona != null ? ` · ${menu.bevande_incluse_persona} bevande incluse a persona` : '') : '';
+  }
+  function mpAggiungi(prodotti) {
+    const menu = tvMenuCache.find(m => m.id === mpMenuAttivo) || {};
+    const righe = mpRighe(); const presenti = new Set(righe.map(r => r.prodotto_id)); let n = 0;
+    for (const p of prodotti) if (!presenti.has(p.id)) { righe.push({ menu_id: mpMenuAttivo, prodotto_id: p.id, incluso: menu.tipo !== 'carta', prezzo: null, max_pezzi_persona: null, bevanda_inclusa: false }); n++; }
+    if (n) { mpSegna(); mpDisegnaTabs(); }
+  }
+  document.getElementById('mp-aggiungi-tutti').addEventListener('click', () => mpAggiungi(mpProdotti.filter(p => p.attivo)));
+  document.getElementById('mp-aggiungi-cat').addEventListener('change', e => { if (e.target.value) mpAggiungi(mpProdotti.filter(p => p.categoria_id === e.target.value && p.attivo)); e.target.value = ''; });
+  document.getElementById('mp-tutti-inclusi').addEventListener('click', () => { mpRighe().forEach(r => r.incluso = true); mpSegna(); mpDisegna(); });
+  document.getElementById('mp-tutti-pagamento').addEventListener('click', () => { mpRighe().forEach(r => { r.incluso = false; r.bevanda_inclusa = false; }); mpSegna(); mpDisegna(); });
+  document.getElementById('mp-svuota').addEventListener('click', () => { if (!mpRighe().length || !confirm('Togliere tutti i prodotti dalla scheda di questo menu?')) return; tvSchedeCache[mpMenuAttivo] = []; mpSegna(); mpDisegnaTabs(); });
+  document.getElementById('mp-cerca').addEventListener('input', mpDisegna);
+  document.getElementById('mp-salva').addEventListener('click', async () => {
+    if (!mpMenuAttivo) return;
+    const b = document.getElementById('mp-salva'); b.disabled = true; b.textContent = 'Salvo…';
+    const righe = mpRighe().map((r, i) => ({ menu_id: mpMenuAttivo, prodotto_id: r.prodotto_id, incluso: !!r.incluso, prezzo: r.prezzo, max_pezzi_persona: r.max_pezzi_persona, bevanda_inclusa: !!r.bevanda_inclusa, ordine: i }));
+    let { error } = await sbClient.from('menu_tavolo_prodotti').delete().eq('menu_id', mpMenuAttivo);
+    if (!error && righe.length) ({ error } = await sbClient.from('menu_tavolo_prodotti').insert(righe));
+    if (error) { alert('Errore nel salvataggio: ' + error.message); b.disabled = false; b.textContent = 'Salva scheda *'; return; }
+    mpModificato = false; b.textContent = 'Scheda salvata ✓'; setTimeout(() => { b.textContent = 'Salva scheda'; }, 2000);
     tvCaricaMenu();
   });
 
