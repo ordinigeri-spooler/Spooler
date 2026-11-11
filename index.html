@@ -840,6 +840,11 @@
         <div><label for="mt-bevande-incluse">Bevande incluse a persona</label><input type="number" min="0" id="mt-bevande-incluse" placeholder="vuoto = nessun limite"></div>
       </div>
       <p class="tv-hint">Menu fisso: es. 10 piatti a scelta e 1 bevanda a persona per tutta la permanenza; oltre, le bevande "incluse" si pagano. Le bevande incluse si segnano nella scheda prodotti del menu.</p>
+      <div class="row-2" id="mt-blocco-regole">
+        <div><label for="mt-max-comanda">Prodotti a scelta per coperto, a comanda</label><input type="number" min="1" id="mt-max-comanda" placeholder="vuoto = regola del locale"></div>
+        <div><label for="mt-minuti">Minuti tra una comanda e l'altra</label><input type="number" min="0" id="mt-minuti" placeholder="vuoto = regola del locale"></div>
+      </div>
+      <p class="tv-hint">Regole di questo menu. Vuote = valgono quelle del locale (Tavoli → Regole delle comande).</p>
 
       <label>Categorie del menu <span style="font-weight:400; opacity:.7;">(modo semplice: usato solo se la scheda prodotti del menu è vuota)</span></label>
       <p class="tv-hint" style="margin-top:0;">Spunta le categorie visibili. Nell'all you can eat togli "compresa" a quelle che si pagano a parte (es. bevande). Nessuna spunta in un menu alla carta = tutte le categorie. <b>Se nel tab del menu scegli i piatti uno per uno, le categorie non contano più.</b></p>
@@ -4835,6 +4840,41 @@ const ICONE_CATEGORIA_BASE64 = {
   </div>
 </div>
 
+<div class="modal-backdrop" id="modal-wizard">
+  <div class="modal" style="max-width:640px;">
+    <div class="wz-testa"><h3 id="wz-titolo" style="margin:0;">Nuovo menu</h3><span class="tv-hint" id="wz-passo" style="margin:0;"></span></div>
+    <div class="wz-barra"><div id="wz-barra-fill"></div></div>
+    <div id="wz-corpo" style="min-height:260px;"></div>
+    <div class="msg" id="wizard-msg"></div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button type="button" class="secondary" id="wz-annulla">Annulla</button>
+      <div style="display:flex; gap:8px;"><button type="button" class="secondary" id="wz-indietro">‹ Indietro</button><button type="button" id="wz-avanti">Avanti ›</button></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .wz-testa { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .wz-barra { height: 5px; background: var(--border); border-radius: 99px; margin: 10px 0 16px; overflow: hidden; }
+  .wz-barra div { height: 100%; background: var(--accent, #e2604f); width: 0; transition: width .25s; }
+  .wz-intro { font-size: 14px; margin: 0 0 10px; }
+  .wz-scelte { display: flex; flex-direction: column; gap: 8px; }
+  .wz-opt { display: flex; gap: 12px; align-items: flex-start; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+  .wz-opt input { width: auto; margin: 3px 0 0; }
+  .wz-opt.on { border-color: var(--accent, #e2604f); }
+  .wz-opt b { display: block; } .wz-opt small { color: var(--ink-dim); }
+  .wz-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; max-height: 230px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
+  .wz-cats label { display: flex; align-items: center; gap: 8px; margin: 0; padding: 6px 8px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .wz-cats label.off { opacity: .45; }
+  .wz-cats input { width: auto; margin: 0; }
+  .wz-cats small { color: var(--ink-dim); margin-left: auto; }
+  .wz-toggle { display: flex; gap: 8px; margin-top: 10px; }
+  .wz-toggle button { flex: 1; }
+  .wz-toggle button.on { background: var(--accent, #e2604f); color: #fff; border-color: var(--accent, #e2604f); }
+  .wz-riass { font-size: 14px; line-height: 1.6; }
+  .wz-riass b { color: var(--accent, #e2604f); }
+</style>
+
 <style>
   .tv-griglia { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 18px; }
   @media (max-width: 860px) { .tv-griglia { grid-template-columns: 1fr; } }
@@ -5065,6 +5105,8 @@ const ICONE_CATEGORIA_BASE64 = {
     document.getElementById('mt-plu-bambino').value = x && x.plu_bambino ? x.plu_bambino : '';
     document.getElementById('mt-ordine').value = x ? x.ordine_visualizzazione : tvMenuCache.length;
     document.getElementById('mt-limite-piatti').value = x && x.limite_piatti_persona ? x.limite_piatti_persona : '';
+    document.getElementById('mt-max-comanda').value = x && x.max_pezzi_persona_comanda ? x.max_pezzi_persona_comanda : '';
+    document.getElementById('mt-minuti').value = x && x.minuti_riordino != null ? x.minuti_riordino : '';
     document.getElementById('mt-bevande-incluse').value = x && x.bevande_incluse_persona != null ? x.bevande_incluse_persona : '';
     document.getElementById('mt-attivo').checked = x ? x.attivo : true;
     const sel = new Map((x ? x.menu_tavolo_categorie || [] : []).map(mc => [mc.categoria_id, mc.compresa]));
@@ -5082,7 +5124,193 @@ const ICONE_CATEGORIA_BASE64 = {
     document.querySelectorAll('#mt-categorie .comp').forEach(el => el.style.display = ayce ? '' : 'none');
   }
   document.getElementById('mt-tipo').addEventListener('change', tvAggiornaTipo);
-  document.getElementById('btn-nuovo-menu-tavolo').addEventListener('click', () => { if (mpModificato && !confirm('Ci sono modifiche non salvate nella scheda prodotti: le perdi?')) return; mpModificato = false; mnNuovo = true; mnDisegna(); });
+  document.getElementById('btn-nuovo-menu-tavolo').addEventListener('click', () => { if (mpModificato && !confirm('Ci sono modifiche non salvate nella scheda prodotti: le perdi?')) return; mpModificato = false; wzApri(); });
+
+  // ================= CREAZIONE GUIDATA DEL MENU =================
+  // nome e tipo -> bevande -> piatti -> dolci -> giorni e orari -> coperti -> regole -> riepilogo
+  let wz = null;
+  const WZ_BEV = /bevand|bibit|drink|vin[oi]\b|vini|caff|bar\b|birr|cocktail|liquor|amar|acqua|succh/i;
+  const WZ_DOLCI = /dolc|dessert|gelat|tort|frutt/i;
+  function wzApri() {
+    const cats = [...new Map(mpProdotti.filter(p => p.categoria_id && p.attivo).map(p => [p.categoria_id, { id: p.categoria_id, nome: p.categoria, n: 0 }])).values()];
+    mpProdotti.forEach(p => { const c = cats.find(x => x.id === p.categoria_id); if (c && p.attivo) c.n++; });
+    wz = {
+      passo: 0, cats,
+      nome: '', tipo: 'ayce', descrizione: '',
+      bev: new Set(cats.filter(c => WZ_BEV.test(c.nome)).map(c => c.id)), bevPagamento: true, bevInclusePersona: 1,
+      dolci: new Set(cats.filter(c => WZ_DOLCI.test(c.nome) && !WZ_BEV.test(c.nome)).map(c => c.id)), dolciPagamento: true,
+      piatti: new Set(cats.filter(c => !WZ_BEV.test(c.nome) && !WZ_DOLCI.test(c.nome)).map(c => c.id)), piattiPersona: 10,
+      giorni: Object.fromEntries(TV_GIORNI.map(([k]) => [k, true])), oraDa: '', oraA: '',
+      pluAdulto: '', pluBambino: '', prezzoAdulto: '', prezzoBambino: '',
+      maxComanda: '', minuti: '',
+    };
+    clearMsg('wizard-msg');
+    wzDisegna();
+    openModal('modal-wizard');
+  }
+  function wzPassi() {
+    const p = [{ id: 'base', t: 'Nome e tipo di menu' }];
+    if (wz.tipo !== 'carta') p.push({ id: 'bev', t: 'Beverage: bevande, vini, caffetteria' }, { id: 'piatti', t: 'I piatti del menu' }, { id: 'dolci', t: 'I dolci' });
+    else p.push({ id: 'cat', t: 'Categorie visibili' });
+    p.push({ id: 'quando', t: 'Giorni e orari' }, { id: 'coperti', t: 'Coperti e prezzo' }, { id: 'regole', t: 'Regole delle comande' }, { id: 'fine', t: 'Riepilogo' });
+    return p;
+  }
+  function wzCats(set, soloDa) {
+    const lista = soloDa ? wz.cats.filter(c => soloDa.includes(c.id) || set.has(c.id)) : wz.cats;
+    return `<div class="wz-cats">${lista.map(c => `<label class="${set.has(c.id) ? '' : 'off'}"><input type="checkbox" data-cat="${c.id}" ${set.has(c.id) ? 'checked' : ''}> ${escapeHtml(c.nome)}<small>${c.n}</small></label>`).join('') || '<div class="tv-hint">Nessuna categoria: importa prima il catalogo da Geri.</div>'}</div>`;
+  }
+  function wzToggle(nome, valore, testoSi, testoNo) {
+    return `<div class="wz-toggle"><button type="button" class="${valore ? 'on' : 'secondary'}" data-tg="${nome}" data-v="1">${testoSi}</button><button type="button" class="${!valore ? 'on' : 'secondary'}" data-tg="${nome}" data-v="0">${testoNo}</button></div>`;
+  }
+  function wzDisegna() {
+    const passi = wzPassi(), p = passi[wz.passo], corpo = document.getElementById('wz-corpo');
+    document.getElementById('wz-passo').textContent = `Passo ${wz.passo + 1} di ${passi.length}`;
+    document.getElementById('wz-titolo').textContent = (wz.nome ? wz.nome + ' — ' : 'Nuovo menu — ') + p.t;
+    document.getElementById('wz-barra-fill').style.width = Math.round((wz.passo + 1) / passi.length * 100) + '%';
+    document.getElementById('wz-indietro').style.visibility = wz.passo ? '' : 'hidden';
+    document.getElementById('wz-avanti').textContent = p.id === 'fine' ? '✓ Crea menu' : 'Avanti ›';
+    const nonBev = wz.cats.filter(c => !wz.bev.has(c.id)).map(c => c.id);
+    const nonBevNonDolci = nonBev.filter(id => !wz.dolci.has(id));
+    let h = '';
+    if (p.id === 'base') h = `
+      <label for="wz-nome">Nome del menu (lo vede il cliente)</label><input type="text" id="wz-nome" value="${escapeHtml(wz.nome)}" placeholder="Es. All you can eat Cena, Menu Domenica, Menu Festa">
+      <label>Tipo</label>
+      <div class="wz-scelte">
+        <label class="wz-opt ${wz.tipo === 'ayce' ? 'on' : ''}"><input type="radio" name="wz-tipo" value="ayce" ${wz.tipo === 'ayce' ? 'checked' : ''}><span><b>All you can eat</b><small>Prezzo a persona, piatti compresi a 0 €, bevande e dolci di solito a pagamento</small></span></label>
+        <label class="wz-opt ${wz.tipo === 'fisso' ? 'on' : ''}"><input type="radio" name="wz-tipo" value="fisso" ${wz.tipo === 'fisso' ? 'checked' : ''}><span><b>Menu fisso</b><small>Prezzo a persona, N piatti a scelta + bevanda inclusa (es. 25 € per 10 piatti e una bibita)</small></span></label>
+        <label class="wz-opt ${wz.tipo === 'carta' ? 'on' : ''}"><input type="radio" name="wz-tipo" value="carta" ${wz.tipo === 'carta' ? 'checked' : ''}><span><b>Alla carta</b><small>Ogni prodotto al suo prezzo, eventuale coperto</small></span></label>
+      </div>
+      <label for="wz-desc">Descrizione (facoltativa)</label><input type="text" id="wz-desc" value="${escapeHtml(wz.descrizione)}" placeholder="Es. Bevande e dolci esclusi">`;
+    if (p.id === 'bev') h = `
+      <p class="wz-intro">Quali categorie sono il <b>beverage</b> di questo menu? (bevande, vini, caffetteria…)</p>
+      ${wzCats(wz.bev)}
+      <label style="margin-top:12px;">Le bevande sono…</label>
+      ${wzToggle('bevPagamento', wz.bevPagamento, '💶 A pagamento (al loro prezzo)', '✅ Incluse nel menu')}
+      ${!wz.bevPagamento ? `<div class="row-2" style="margin-top:10px;"><div><label for="wz-bev-n">Bevande incluse a persona</label><input type="number" min="0" id="wz-bev-n" value="${wz.bevInclusePersona ?? ''}" placeholder="vuoto = illimitate"></div><div class="tv-hint" style="margin-top:28px;">Es. 1: la prima bibita a persona è inclusa, le altre si pagano.</div></div>` : ''}`;
+    if (p.id === 'piatti') h = `
+      <p class="wz-intro">Quali categorie sono i <b>piatti del menu</b>, compresi nel prezzo a persona?</p>
+      ${wzCats(wz.piatti, nonBevNonDolci)}
+      ${wz.tipo === 'fisso' ? `<div class="row-2" style="margin-top:10px;"><div><label for="wz-piatti-n">Piatti a scelta a persona (tutto il pasto)</label><input type="number" min="1" id="wz-piatti-n" value="${wz.piattiPersona}"></div><div class="tv-hint" style="margin-top:28px;">Es. 10: ogni coperto può scegliere 10 piatti in totale.</div></div>` : '<p class="tv-hint">Nella scheda del menu potrai poi mettere un massimo di pezzi per singolo piatto.</p>'}`;
+    if (p.id === 'dolci') h = `
+      <p class="wz-intro">Quali categorie sono i <b>dolci</b>?</p>
+      ${wzCats(wz.dolci, nonBev.filter(id => !wz.piatti.has(id)))}
+      <label style="margin-top:12px;">I dolci sono…</label>
+      ${wzToggle('dolciPagamento', wz.dolciPagamento, '💶 A pagamento (al loro prezzo)', '✅ Inclusi nel menu')}
+      <p class="tv-hint">Le categorie non scelte in nessun passaggio non compaiono nel menu.</p>`;
+    if (p.id === 'cat') h = `<p class="wz-intro">Quali categorie vede il cliente in questo menu alla carta? (tutto al prezzo pieno)</p>${wzCats(wz.piatti)}`;
+    if (p.id === 'quando') h = `
+      <p class="wz-intro">Quando il cliente può <b>scegliere</b> questo menu?</p>
+      <div class="tv-giorni">${TV_GIORNI.map(([k, l]) => `<label><input type="checkbox" data-giorno="${k}" ${wz.giorni[k] ? 'checked' : ''}> ${l}</label>`).join('')}</div>
+      <div class="row-2" style="margin-top:10px;"><div><label for="wz-da">Dalle</label><input type="time" id="wz-da" value="${wz.oraDa}"></div><div><label for="wz-a">Alle</label><input type="time" id="wz-a" value="${wz.oraA}"></div></div>
+      <p class="tv-hint">Lascia gli orari vuoti per tutto il giorno. Es. pranzo 11:30–15:00, cena 18:30–23:30.</p>`;
+    if (p.id === 'coperti') {
+      const cop = tvPluCache.filter(x => x.e_coperto);
+      const opz = sel => '<option value="">— nessuno —</option>' + cop.map(x => `<option value="${x.codice_geri}" ${String(sel) === String(x.codice_geri) ? 'selected' : ''}>${escapeHtml(x.nome)} — ${tvEuro(x.prezzo)} (cod. ${x.codice_geri})</option>`).join('');
+      h = `
+      <p class="wz-intro">${wz.tipo !== 'carta' ? 'Quale <b>coperto</b> di Geri viene addebitato a persona? Il suo prezzo è il prezzo del menu.' : 'Vuoi addebitare un <b>coperto</b> a persona? (facoltativo)'}</p>
+      ${cop.length ? '' : '<div class="msg error" style="display:block;">Nessun PLU segnato come coperto: vai in Tavoli → Coperti e spunta "È un coperto" (serve prima "Importa catalogo" dallo spooler).</div>'}
+      <div class="row-2"><div><label>Coperto adulto</label><select id="wz-plu-a">${opz(wz.pluAdulto)}</select></div><div><label>Coperto bambino</label><select id="wz-plu-b">${opz(wz.pluBambino)}</select></div></div>
+      <div class="row-2"><div><label>Prezzo adulto €</label><input type="number" step="0.01" min="0" id="wz-pr-a" value="${wz.prezzoAdulto}"></div><div><label>Prezzo bambino €</label><input type="number" step="0.01" min="0" id="wz-pr-b" value="${wz.prezzoBambino}"></div></div>
+      <p class="tv-hint">Scegliendo un coperto il prezzo si compila da solo (da Geri). Se il bambino resta "nessuno", ai bambini va il coperto adulto al prezzo bambino.</p>`;
+    }
+    if (p.id === 'regole') h = `
+      <p class="wz-intro">Regole delle comande di questo menu.</p>
+      <div class="row-2">
+        <div><label for="wz-max">Prodotti a scelta per coperto, a comanda</label><input type="number" min="1" id="wz-max" value="${wz.maxComanda}" placeholder="vuoto = regola del locale"></div>
+        <div><label for="wz-min">Minuti tra una comanda e l'altra</label><input type="number" min="0" id="wz-min" value="${wz.minuti}" placeholder="vuoto = regola del locale"></div>
+      </div>
+      <p class="tv-hint">Es. 5 e 3 coperti = massimo 15 piatti del menu per comanda. I minuti valgono dall'invio di una comanda alla successiva. Le bevande e i prodotti a pagamento non contano nei limiti.</p>`;
+    if (p.id === 'fine') {
+      const nomi = set => wz.cats.filter(c => set.has(c.id)).map(c => escapeHtml(c.nome)).join(', ') || '—';
+      const cop = c => { const x = tvPlu(c); return x ? escapeHtml(x.nome) : '—'; };
+      const nProd = wzProdottiDaCaricare().length;
+      h = `<div class="wz-riass">
+        <b>${escapeHtml(wz.nome)}</b> · ${wz.tipo === 'ayce' ? 'All you can eat' : wz.tipo === 'fisso' ? 'Menu fisso' : 'Alla carta'}<br>
+        ${wz.tipo !== 'carta' ? `Beverage: ${nomi(wz.bev)} (${wz.bevPagamento ? 'a pagamento' : 'incluse' + (wz.bevInclusePersona !== '' && wz.bevInclusePersona !== null ? `, ${wz.bevInclusePersona} a persona` : '')})<br>
+        Piatti del menu: ${nomi(wz.piatti)}${wz.tipo === 'fisso' ? ` · ${wz.piattiPersona} a scelta a persona` : ''}<br>
+        Dolci: ${nomi(wz.dolci)} (${wz.dolciPagamento ? 'a pagamento' : 'inclusi'})<br>` : `Categorie: ${nomi(wz.piatti)}<br>`}
+        Quando: ${TV_GIORNI.filter(([k]) => wz.giorni[k]).map(([, l]) => l).join(' ') || 'nessun giorno'} · ${wz.oraDa && wz.oraA ? wz.oraDa + '–' + wz.oraA : 'tutto il giorno'}<br>
+        Coperto adulto: ${cop(wz.pluAdulto)} ${tvEuro(wz.prezzoAdulto)} · bambino: ${wz.pluBambino ? cop(wz.pluBambino) : (wz.pluAdulto ? 'come adulto' : '—')} ${tvEuro(wz.prezzoBambino)}<br>
+        Regole: ${wz.maxComanda ? wz.maxComanda + ' prodotti per coperto a comanda' : 'max del locale'} · ${wz.minuti !== '' ? wz.minuti + ' min tra le comande' : 'minuti del locale'}<br>
+        <span class="tv-hint">Verranno caricati <b>${nProd}</b> prodotti nella scheda del menu: potrai poi correggerli uno per uno (incluso/a pagamento, prezzo, max pezzi).</span>
+      </div>`;
+    }
+    corpo.innerHTML = h;
+    corpo.querySelectorAll('[data-cat]').forEach(c => c.onchange = () => {
+      const set = p.id === 'bev' ? wz.bev : p.id === 'dolci' ? wz.dolci : wz.piatti;
+      if (c.checked) { set.add(c.dataset.cat); if (p.id === 'bev') { wz.piatti.delete(c.dataset.cat); wz.dolci.delete(c.dataset.cat); } if (p.id === 'dolci') wz.piatti.delete(c.dataset.cat); if (p.id === 'piatti') wz.dolci.delete(c.dataset.cat); }
+      else set.delete(c.dataset.cat);
+      c.closest('label').classList.toggle('off', !c.checked);
+    });
+    corpo.querySelectorAll('[data-tg]').forEach(b => b.onclick = () => { wzLeggi(); wz[b.dataset.tg] = b.dataset.v === '1'; wzDisegna(); });
+    corpo.querySelectorAll('[name="wz-tipo"]').forEach(r => r.onchange = () => { wzLeggi(); wz.tipo = r.value; wzDisegna(); });
+    ['a', 'b'].forEach(k => { const sel = document.getElementById('wz-plu-' + k); if (sel) sel.onchange = () => { const x = tvPlu(sel.value); if (x) document.getElementById('wz-pr-' + k).value = Number(x.prezzo).toFixed(2); }; });
+    const nome = document.getElementById('wz-nome'); if (nome) nome.focus();
+  }
+  /** Legge i campi del passo corrente dentro wz. */
+  function wzLeggi() {
+    const v = id => { const el = document.getElementById(id); return el ? el.value : undefined; };
+    if (v('wz-nome') !== undefined) { wz.nome = v('wz-nome').trim(); wz.descrizione = v('wz-desc').trim(); }
+    if (v('wz-bev-n') !== undefined) wz.bevInclusePersona = v('wz-bev-n') === '' ? null : Math.max(0, parseInt(v('wz-bev-n')) || 0);
+    if (v('wz-piatti-n') !== undefined) wz.piattiPersona = Math.max(1, parseInt(v('wz-piatti-n')) || 1);
+    if (document.querySelector('#wz-corpo [data-giorno]')) { wz.giorni = Object.fromEntries([...document.querySelectorAll('#wz-corpo [data-giorno]')].map(c => [c.dataset.giorno, c.checked])); wz.oraDa = v('wz-da'); wz.oraA = v('wz-a'); }
+    if (v('wz-plu-a') !== undefined) { wz.pluAdulto = v('wz-plu-a'); wz.pluBambino = v('wz-plu-b'); wz.prezzoAdulto = v('wz-pr-a'); wz.prezzoBambino = v('wz-pr-b'); }
+    if (v('wz-max') !== undefined) { wz.maxComanda = v('wz-max'); wz.minuti = v('wz-min'); }
+  }
+  function wzValida(id) {
+    if (id === 'base' && !wz.nome) return 'Scrivi il nome del menu.';
+    if (id === 'piatti' && !wz.piatti.size) return 'Scegli almeno una categoria di piatti.';
+    if (id === 'cat' && !wz.piatti.size) return 'Scegli almeno una categoria.';
+    if (id === 'quando' && ((wz.oraDa && !wz.oraA) || (!wz.oraDa && wz.oraA))) return 'Indica sia "dalle" sia "alle", oppure lasciale vuote.';
+    if (id === 'quando' && !Object.values(wz.giorni).some(Boolean)) return 'Scegli almeno un giorno.';
+    if (id === 'coperti' && wz.tipo !== 'carta' && !wz.pluAdulto) return 'Per questo tipo di menu serve il coperto adulto: è il PLU che finisce sul conto di Geri.';
+    return null;
+  }
+  /** Prodotti da mettere nella scheda del menu secondo le scelte. */
+  function wzProdottiDaCaricare() {
+    const righe = [];
+    for (const p of mpProdotti.filter(p => p.attivo)) {
+      let incluso = null, bev = false;
+      if (wz.tipo === 'carta') { if (wz.piatti.has(p.categoria_id)) incluso = false; }
+      else if (wz.bev.has(p.categoria_id)) { incluso = !wz.bevPagamento; bev = incluso; }
+      else if (wz.dolci.has(p.categoria_id)) incluso = !wz.dolciPagamento;
+      else if (wz.piatti.has(p.categoria_id)) incluso = true;
+      if (incluso !== null) righe.push({ prodotto_id: p.id, incluso, prezzo: null, max_pezzi_persona: null, bevanda_inclusa: bev, ordine: righe.length });
+    }
+    return righe;
+  }
+  document.getElementById('wz-indietro').addEventListener('click', () => { wzLeggi(); clearMsg('wizard-msg'); wz.passo = Math.max(0, wz.passo - 1); wzDisegna(); });
+  document.getElementById('wz-annulla').addEventListener('click', () => { closeModal('modal-wizard'); document.getElementById('wz-corpo').innerHTML = ''; });
+  document.getElementById('wz-avanti').addEventListener('click', async () => {
+    wzLeggi();
+    const passi = wzPassi(), p = passi[wz.passo];
+    const err = wzValida(p.id);
+    if (err) { showMsg('wizard-msg', err, 'error'); return; }
+    clearMsg('wizard-msg');
+    if (p.id !== 'fine') { wz.passo++; wzDisegna(); return; }
+    const b = document.getElementById('wz-avanti'); b.disabled = true; b.textContent = 'Creo il menu…';
+    const menu = {
+      tenant_id: currentTenantId, nome: wz.nome, tipo: wz.tipo, descrizione: wz.descrizione || null,
+      giorni: wz.giorni, ora_da: wz.oraDa || null, ora_a: wz.oraA || null,
+      prezzo_adulto: parseFloat(wz.prezzoAdulto) || 0, prezzo_bambino: parseFloat(wz.prezzoBambino) || 0,
+      plu_adulto: parseInt(wz.pluAdulto) || null, plu_bambino: parseInt(wz.pluBambino) || null,
+      limite_piatti_persona: wz.tipo === 'fisso' ? wz.piattiPersona : null,
+      bevande_incluse_persona: wz.tipo !== 'carta' && !wz.bevPagamento ? wz.bevInclusePersona : null,
+      max_pezzi_persona_comanda: parseInt(wz.maxComanda) || null,
+      minuti_riordino: wz.minuti === '' ? null : Math.max(0, parseInt(wz.minuti) || 0),
+      ordine_visualizzazione: tvMenuCache.length, attivo: true,
+    };
+    const r = await sbClient.from('menu_tavolo').insert(menu).select('id').single();
+    if (r.error) { showMsg('wizard-msg', 'Errore: ' + r.error.message, 'error'); b.disabled = false; b.textContent = '✓ Crea menu'; return; }
+    const menuId = (Array.isArray(r.data) ? r.data[0] : r.data).id;
+    const cats = [...new Set([...wz.piatti, ...(wz.tipo !== 'carta' ? [...wz.bev, ...wz.dolci] : [])])].map(id => ({ menu_id: menuId, categoria_id: id, compresa: wz.tipo !== 'carta' && (wz.piatti.has(id) || (wz.bev.has(id) && !wz.bevPagamento) || (wz.dolci.has(id) && !wz.dolciPagamento)) }));
+    if (cats.length) await sbClient.from('menu_tavolo_categorie').insert(cats);
+    const righe = wzProdottiDaCaricare().map(x => ({ menu_id: menuId, ...x }));
+    for (let i = 0; i < righe.length; i += 200) { const e = await sbClient.from('menu_tavolo_prodotti').insert(righe.slice(i, i + 200)); if (e.error) { showMsg('wizard-msg', 'Menu creato ma scheda non completa: ' + e.error.message, 'error'); break; } }
+    closeModal('modal-wizard'); document.getElementById('wz-corpo').innerHTML = ''; b.disabled = false; b.textContent = '✓ Crea menu';
+    await caricaMenuSezione(menuId);
+    showMsg('menu-tavolo-msg', `Menu "${wz.nome}" creato con ${righe.length} prodotti nella scheda. Qui sotto puoi rifinire tutto.`, 'ok');
+  });
   window.tvEliminaMenu = async function(id) {
     const x = tvMenuCache.find(m => m.id === id);
     if (!confirm(`Eliminare il menu "${x.nome}"? I tavoli già aperti con questo menu continuano a funzionare.`)) return;
@@ -5103,7 +5331,7 @@ const ICONE_CATEGORIA_BASE64 = {
       nome: document.getElementById('mt-nome').value.trim(),
       tipo,
       descrizione: document.getElementById('mt-descrizione').value.trim() || null,
-      giorni: Object.fromEntries([...document.querySelectorAll('[data-giorno]')].map(c => [c.dataset.giorno, c.checked])),
+      giorni: Object.fromEntries([...document.querySelectorAll('#form-menu-tavolo [data-giorno]')].map(c => [c.dataset.giorno, c.checked])),
       ora_da: da || null, ora_a: a || null,
       prezzo_adulto: parseFloat(document.getElementById('mt-prezzo-adulto').value) || 0,
       prezzo_bambino: parseFloat(document.getElementById('mt-prezzo-bambino').value) || 0,
@@ -5111,11 +5339,13 @@ const ICONE_CATEGORIA_BASE64 = {
       plu_bambino: parseInt(document.getElementById('mt-plu-bambino').value) || null,
       ordine_visualizzazione: parseInt(document.getElementById('mt-ordine').value) || 0,
       limite_piatti_persona: parseInt(document.getElementById('mt-limite-piatti').value) || null,
+      max_pezzi_persona_comanda: parseInt(document.getElementById('mt-max-comanda').value) || null,
+      minuti_riordino: document.getElementById('mt-minuti').value === '' ? null : Math.max(0, parseInt(document.getElementById('mt-minuti').value) || 0),
       bevande_incluse_persona: document.getElementById('mt-bevande-incluse').value === '' ? null : Math.max(0, parseInt(document.getElementById('mt-bevande-incluse').value) || 0),
       attivo: document.getElementById('mt-attivo').checked,
     };
     if (tipo !== 'carta' && !payload.plu_adulto) { showMsg('menu-tavolo-msg', 'Per questo tipo di menu scegli il coperto adulto (è il PLU che finisce sul conto di Geri).', 'error'); return; }
-    const cats = [...document.querySelectorAll('[data-cat]:checked')].map(c => ({
+    const cats = [...document.querySelectorAll('#mt-categorie [data-cat]:checked')].map(c => ({
       categoria_id: c.dataset.cat,
       compresa: tipo !== 'carta' ? document.querySelector(`[data-comp="${c.dataset.cat}"]`).checked : false,
     }));
