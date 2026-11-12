@@ -1136,6 +1136,10 @@
             <input type="checkbox" id="prodotto-non-stampare" style="width:auto; margin:0;">
             Non stampare in comanda <span style="opacity:.7; font-weight:400;">(va solo sul tavolo di Geri)</span>
           </label>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:8px;">
+            <input type="checkbox" id="prodotto-e-coperto" style="width:auto; margin:0;">
+            È un coperto <span style="opacity:.7; font-weight:400;">(scegliibile come coperto adulto/bambino nei menu; serve il codice Geri)</span>
+          </label>
         </div>
         <div>
           <label for="prodotto-ordine">Ordine</label>
@@ -2578,6 +2582,7 @@ const ICONE_CATEGORIA_BASE64 = {
     document.getElementById('prodotto-codice-geri').value = p.codice_geri ?? '';
     document.getElementById('prodotto-max-pezzi').value = p.max_pezzi_persona ?? '';
     document.getElementById('prodotto-non-stampare').checked = !!p.non_stampare;
+    document.getElementById('prodotto-e-coperto').checked = !!p.e_coperto;
     document.getElementById('prodotto-ordine').value = p.ordine_visualizzazione;
     document.getElementById('prodotto-attivo').checked = p.attivo;
     document.getElementById('prodotto-novita').checked = !!p.novita;
@@ -2765,6 +2770,7 @@ const ICONE_CATEGORIA_BASE64 = {
         codice_geri: parseInt(document.getElementById('prodotto-codice-geri').value) || null,
         max_pezzi_persona: parseInt(document.getElementById('prodotto-max-pezzi').value) || null,
         non_stampare: document.getElementById('prodotto-non-stampare').checked,
+        e_coperto: document.getElementById('prodotto-e-coperto').checked,
         ordine_visualizzazione: parseInt(document.getElementById('prodotto-ordine').value) || 0,
         attivo: document.getElementById('prodotto-attivo').checked,
         novita: document.getElementById('prodotto-novita').checked,
@@ -5019,9 +5025,19 @@ const ICONE_CATEGORIA_BASE64 = {
   // ---------- coperti (PLU di Geri) ----------
   let tvPluCache = [];
   const tvPlu = cod => tvPluCache.find(p => p.codice_geri === Number(cod));
+  let tvPluErrore = null;
   async function tvCaricaPlu() {
-    const { data, error } = await sbClient.from('plu_geri').select('id, codice_geri, nome, prezzo, categoria, e_coperto').eq('tenant_id', currentTenantId).order('nome');
+    const [{ data, error }, prod] = await Promise.all([
+      sbClient.from('plu_geri').select('id, codice_geri, nome, prezzo, categoria, e_coperto').eq('tenant_id', currentTenantId).order('nome'),
+      // prodotti del sito segnati "È un coperto" nella scheda prodotto (con codice Geri)
+      sbClient.from('prodotti').select('id, codice_geri, nome, prezzo_base, categorie(nome)').eq('tenant_id', currentTenantId).eq('e_coperto', true).not('codice_geri', 'is', null),
+    ]);
+    tvPluErrore = error ? error.message : null;
     tvPluCache = error ? [] : data;
+    for (const p of (prod.data || [])) {
+      if (tvPluCache.some(x => x.codice_geri === p.codice_geri)) { tvPluCache.find(x => x.codice_geri === p.codice_geri).e_coperto = true; continue; }
+      tvPluCache.push({ id: 'prod:' + p.id, codice_geri: p.codice_geri, nome: p.nome, prezzo: p.prezzo_base, categoria: (p.categorie && p.categorie.nome) || 'prodotto del sito', e_coperto: true, daProdotto: true });
+    }
     tvDisegnaPlu();
   }
   function tvDisegnaPlu() {
@@ -5030,11 +5046,13 @@ const ICONE_CATEGORIA_BASE64 = {
     const lista = tvPluCache.filter(p => (!solo || p.e_coperto) && (!q || p.nome.toLowerCase().includes(q) || String(p.codice_geri) === q))
       .sort((a, b) => (b.e_coperto - a.e_coperto) || a.nome.localeCompare(b.nome));
     document.getElementById('tv-lista-plu').innerHTML = !tvPluCache.length
-      ? '<div class="r">Nessun PLU: dallo spooler premi "Importa catalogo sul sito".</div>'
+      ? `<div class="r" style="display:block; line-height:1.5;">${tvPluErrore
+          ? `<b style="color:var(--error);">Errore nel leggere i PLU:</b> ${escapeHtml(tvPluErrore)}<br>Se dice che la tabella <b>plu_geri</b> non esiste, lancia <b>07_coperti.sql</b> nel SQL Editor di Supabase.`
+          : `Nessun PLU importato. Dallo spooler (versione 1.1.5 o successiva) premi <b>"Importa catalogo sul sito"</b>: porta qui tutti i PLU di Geri con nome e prezzo.<br>In alternativa apri un prodotto in <b>Prodotti</b> e spunta "È un coperto".`}</div>`
       : !lista.length ? `<div class="r">${solo ? 'Nessun PLU spuntato come coperto: togli "Solo coperti" e spunta quelli giusti.' : 'Nessun risultato.'}</div>`
       : lista.map(p => `<div class="r"><b style="min-width:52px;">${p.codice_geri}</b> ${escapeHtml(p.nome)} <span class="tv-hint" style="margin:0;">${escapeHtml(p.categoria || '')}</span>
           <span style="margin-left:auto; font-weight:700;">${tvEuro(p.prezzo)}</span>
-          <label class="comp" style="margin-left:14px; display:flex;"><input type="checkbox" ${p.e_coperto ? 'checked' : ''} onchange="tvSegnaCoperto('${p.id}', this.checked)"> È un coperto</label></div>`).join('');
+          <label class="comp" style="margin-left:14px; display:flex;"><input type="checkbox" ${p.e_coperto ? 'checked' : ''} ${p.daProdotto ? 'disabled title="Impostato nella scheda prodotto"' : ''} onchange="tvSegnaCoperto('${p.id}', this.checked)"> È un coperto</label></div>`).join('');
   }
   window.tvSegnaCoperto = async function(id, valore) {
     const { error } = await sbClient.from('plu_geri').update({ e_coperto: valore }).eq('id', id);
