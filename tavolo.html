@@ -6,7 +6,7 @@
 <title>Ordina al tavolo</title>
 <meta name="theme-color" content="#33421f">
 <link rel="apple-touch-icon" href="/icon-192.png">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -80,10 +80,25 @@
   .prezzo { font-weight: 800; color: var(--accent); }
   .incluso { font-size: 12px; font-weight: 700; color: var(--ok); background: #e7f0de; padding: 2px 8px; border-radius: 99px; }
   .limite { font-size: 11.5px; color: var(--ink-dim); }
-  .agg { flex: none; }
-  .agg .piu { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 24px; font-weight: 700; display: grid; place-items: center; }
+  .agg { flex: none; text-align: center; }
+  .agg .piu { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 24px; font-weight: 700; display: grid; place-items: center; margin: 0 auto; }
   .agg .stepper button { width: 34px; height: 34px; font-size: 19px; }
   .agg .stepper span { min-width: 24px; font-size: 17px; }
+  .agg .stepper .qnew { color: var(--accent); }          /* quantità nuova (questa comanda) in rosso */
+  .agg .qnew-lbl { text-align: center; font-size: 12px; font-weight: 700; margin-top: 3px; color: var(--accent); }
+  .agg .gia { color: var(--ok); font-size: 12px; font-weight: 800; margin-top: 4px; white-space: nowrap; }  /* già ordinati in verde */
+
+  /* schermata apertura più grande (coperti e menu) */
+  #v-apertura .card { padding: 20px 20px; margin-top: 18px; }
+  #v-apertura .card h2 { font-size: 23px; }
+  #v-apertura .persone { padding: 16px 0; }
+  #v-apertura .persone .nome { font-size: 19px; }
+  #v-apertura .stepper { gap: 8px; }
+  #v-apertura .stepper button { width: 50px; height: 50px; font-size: 27px; }
+  #v-apertura .stepper span { min-width: 46px; font-size: 26px; }
+  #v-apertura .menu-scelta { padding: 18px; margin-top: 12px; }
+  #v-apertura .menu-scelta .t b { font-size: 20px; }
+  #v-apertura .btn { padding: 18px; font-size: 19px; }
 
   /* barra carrello */
   .barra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 70%, transparent); }
@@ -307,6 +322,13 @@ function limiteFisso() { return menuCorrente && menuCorrente.limite_piatti_perso
 function fissiUsati() { return Number((info.sessione || {}).piatti_usati || 0); }
 function scelteUsate(sc) { return Number((info.sessione || {}).bevande_usate || 0); }
 function pezziProdotto(id) { return carrello.filter(r => r.prodotto_id === id).reduce((s, r) => s + r.quantita, 0); }
+/** Pezzi di questo prodotto GIÀ inviati nelle comande precedenti di questa sessione. */
+function giaOrdinato(p) {
+  let n = 0;
+  for (const c of (info.sessione && info.sessione.comande) || [])
+    for (const r of c.righe || []) if (r.nome === p.nome) n += Number(r.quantita) || 0;
+  return n;
+}
 function pezziCompresi() { return carrello.filter(r => { const p = prodotto(r.prodotto_id); return p && eCompreso(p); }).reduce((s, r) => s + r.quantita, 0); }
 /** Pezzi nel carrello dei prodotti di una scelta compresa. */
 function pezziScelta(sc) { return carrello.filter(r => sc.prodotti.includes(r.prodotto_id)).reduce((s, r) => s + r.quantita, 0); }
@@ -406,11 +428,13 @@ function disegnaMenu() {
 function schedaProdotto(p) {
   const compreso = eCompreso(p);
   const lp = limiteProdotto(p);
-  const n = pezziProdotto(p.id);
+  const n = pezziProdotto(p.id);        // nel carrello di QUESTA comanda (in rosso)
+  const gia = giaOrdinato(p);           // già inviati prima (in verde)
   const conVarianti = p.gruppi.length > 0;
   const controllo = !conVarianti && n > 0
-    ? `<div class="stepper"><button data-meno="${p.id}">−</button><span>${n}</span><button data-piu="${p.id}">+</button></div>`
-    : `<button class="piu" data-apri="${p.id}" aria-label="Aggiungi">+</button>${conVarianti && n ? `<div style="text-align:center;font-size:12px;font-weight:700;margin-top:3px">${n} in comanda</div>` : ''}`;
+    ? `<div class="stepper"><button data-meno="${p.id}">−</button><span class="qnew">${n}</span><button data-piu="${p.id}">+</button></div>`
+    : `<button class="piu" data-apri="${p.id}" aria-label="Aggiungi">+</button>${conVarianti && n ? `<div class="qnew-lbl">${n} in comanda</div>` : ''}`;
+  const giaLbl = gia > 0 ? `<div class="gia">già presi: ${gia}</div>` : '';
   return `<div class="prodotto" id="prod-${p.id}">
     ${p.immagine_url ? `<img src="${esc(p.immagine_url)}" alt="" loading="lazy">` : ''}
     <div class="info">
@@ -419,7 +443,7 @@ function schedaProdotto(p) {
       <div class="riga-prezzo">${etichettaPrezzo(p)}
         ${lp ? `<span class="limite">max ${lp} a comanda</span>` : ''}</div>
     </div>
-    <div class="agg">${controllo}</div>
+    <div class="agg">${controllo}${giaLbl}</div>
   </div>`;
 }
 function etichettaPrezzo(p) {
@@ -659,6 +683,8 @@ async function avvia() {
     scartoOrologio = new Date(info.ora_server).getTime() - Date.now();
     if (info.sessione) await entraNelMenu();
     else {
+      // tavolo libero: si riparte da zero, scordando i coperti del gruppo precedente
+      persone = { adulti: 2, bambini: 0 };
       menuScelto = info.menu && info.menu.length === 1 ? info.menu[0].id : null;
       $('sub-testata').textContent = '';
       disegnaApertura(); mostra('v-apertura');
