@@ -703,9 +703,10 @@ function aggiornaRuota() {
   let att = btns.findIndex(b => b.classList.contains('on'));
   if (att < 0) att = 0;
   const TAGLIE = [[19, 66], [15, 52], [12.5, 44], [11.5, 38]]; // [font, min-height] per distanza
-  const PASSO = 68;          // distanza verticale tra una categoria e l'altra
   const VISIBILI = 3;        // quante categorie mostrare sopra e sotto l'attiva
   const centro = nav.clientHeight / 2;
+  // passo dinamico: le categorie visibili si distribuiscono su tutta l'altezza della colonna
+  const PASSO = Math.max(60, (centro - 34) / VISIBILI); // distanza verticale tra una categoria e l'altra
   btns.forEach((b, i) => {
     let d = ((i - att) % N + N) % N;   // 0..N-1
     if (d > N / 2) d -= N;             // distanza ciclica con segno: -N/2..N/2
