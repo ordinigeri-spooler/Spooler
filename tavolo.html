@@ -73,7 +73,8 @@
 
   /* griglia prodotti — PLU senza cornice, fusi col background */
   .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 12px; }
-  .prodotto { display: flex; flex-direction: column; background: transparent; border: 0; border-radius: 0; padding: 0; cursor: pointer; }
+  .prodotto { display: flex; flex-direction: column; background: transparent; border: 0; border-radius: 0; padding: 0; cursor: pointer; position: relative; z-index: 2; }
+  section.categoria h3 { position: relative; z-index: 2; }
   .prodotto .media { position: relative; width: 100%; }
   .prodotto .foto, .prodotto .foto-vuota {
     width: 100%; aspect-ratio: 1/1; border-radius: 22px; object-fit: cover; display: block;
@@ -257,10 +258,10 @@
       0 0 9px rgba(255,255,255,.95);
   }
 
-  /* faro soffuso fisso al centro: illumina da dietro i prodotti che stai guardando mentre scrolli */
+  /* faro: illumina lo sfondo DIETRO le card (le card hanno z-index più alto e restano davanti) */
   #faro-prodotti {
     position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    width: 150vw; height: 92vh; max-width: 900px; pointer-events: none; z-index: 8;
+    width: 150vw; height: 92vh; max-width: 900px; pointer-events: none; z-index: 1;
     mix-blend-mode: screen;
     background: radial-gradient(ellipse at center,
       rgba(255,253,246,.72) 0%,
@@ -411,7 +412,7 @@ async function caricaLocale() {
     if (data.logo_url) { $('logo').src = data.logo_url; $('logo').classList.remove('hidden'); }
     document.body.classList.toggle('cat-left', !!data.categorie_laterali);
     if (data.sfondo_url) {
-      // immagine di sfondo piena, senza velo; le scritte diventano nere con alone chiaro
+      // foto di sfondo piena; il faro la schiarisce dietro le card (card e scritte restano davanti)
       document.body.classList.add('con-sfondo');
       document.body.style.backgroundImage = `url('${data.sfondo_url}')`;
       document.body.style.backgroundSize = 'cover';
