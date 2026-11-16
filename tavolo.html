@@ -17,7 +17,7 @@
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-  body { min-height: 100vh; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  body { min-height: 100vh; padding-bottom: var(--spazio-fondo, calc(150px + env(safe-area-inset-bottom))); }
   h1, h2, h3 { margin: 0; font-family: 'Baloo 2', 'Segoe UI', sans-serif; line-height: 1.15; }
   button { font: inherit; cursor: pointer; border: 0; }
   .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
@@ -182,6 +182,29 @@
   .barra button { max-width: 608px; margin: 0 auto; display: flex; width: 100%; align-items: center; justify-content: space-between; background: var(--verde); color: #fff; border-radius: 14px; padding: 14px 18px; font-weight: 700; font-size: 16px; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
   .barra .n { background: var(--accent); border-radius: 99px; padding: 2px 10px; margin-right: 8px; }
 
+  /* barra strumenti sempre visibile in basso (ricerca + viste + allergeni) */
+  .barra-strumenti {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 29;
+    padding: 9px 16px calc(9px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 82%, rgba(247,241,214,.86) 100%);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    display: flex; flex-direction: column; gap: 8px;
+    box-shadow: 0 -6px 18px rgba(70,56,20,.08);
+  }
+  .barra-strumenti > * { max-width: 608px; margin-left: auto; margin-right: auto; width: 100%; }
+  .cerca-box {
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border: 1.5px solid rgba(51,66,31,.18); border-radius: 14px;
+    padding: 9px 12px; box-shadow: 0 4px 14px rgba(70,56,20,.08);
+  }
+  .cerca-box .lente { opacity: .55; font-size: 15px; }
+  .cerca-box input { flex: 1; border: 0; background: transparent; font-size: 15px; outline: none; color: #243018; min-width: 0; }
+  .cerca-box input::-webkit-search-cancel-button { display: none; }
+  .cerca-x { background: transparent; color: #8a8f7e; font-weight: 800; font-size: 15px; padding: 2px 6px; line-height: 1; }
+  .strumenti-azioni { display: flex; gap: 8px; align-items: stretch; }
+  .strumenti-azioni .tabs-viste { flex: 1; margin-top: 0; }
+  .strumenti-azioni .barra-filtri { margin: 0; }
+
   /* fogli dal basso */
   .velo { position: fixed; inset: 0; background: rgba(20,24,12,.45); z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
   .foglio { background: var(--panel); width: 100%; max-width: 640px; max-height: 88vh; border-radius: 20px 20px 0 0; display: flex; flex-direction: column; }
@@ -322,11 +345,6 @@
   <div id="v-menu" class="hidden">
     <div id="faro-prodotti" aria-hidden="true"></div>
     <div class="stato" id="stato-comanda"></div>
-    <div class="tabs-viste"><button class="on" data-vista="ordina">Menu</button><button data-vista="comande">Le comande <span id="n-comande"></span></button></div>
-    <div class="barra-filtri hidden" id="barra-filtri">
-      <button class="chip-filtro" id="btn-filtri">🔎 Allergeni<span class="fn hidden" id="filtri-n">0</span></button>
-      <button class="azzera hidden" id="btn-azzera-filtri">Mostra tutto ✕</button>
-    </div>
     <div id="sotto-ordina">
       <nav class="cat"><div class="scroll" id="tabs-cat"></div></nav>
       <div id="lista-prodotti"></div>
@@ -334,6 +352,21 @@
     <div id="sotto-comande" class="hidden"></div>
   </div>
 </main>
+
+<div class="barra-strumenti hidden" id="barra-strumenti">
+  <div class="cerca-box" id="cerca-box">
+    <span class="lente">🔎</span>
+    <input id="cerca-prod" type="search" placeholder="Cerca un prodotto…" autocomplete="off" enterkeyhint="search">
+    <button class="cerca-x hidden" id="cerca-x" aria-label="Pulisci">✕</button>
+  </div>
+  <div class="strumenti-azioni">
+    <div class="tabs-viste"><button class="on" data-vista="ordina">Menu</button><button data-vista="comande">Le comande <span id="n-comande"></span></button></div>
+    <div class="barra-filtri hidden" id="barra-filtri">
+      <button class="chip-filtro" id="btn-filtri">⚠️ Allergeni<span class="fn hidden" id="filtri-n">0</span></button>
+      <button class="azzera hidden" id="btn-azzera-filtri">Mostra tutto ✕</button>
+    </div>
+  </div>
+</div>
 
 <div class="barra hidden" id="barra"><button id="btn-carrello"><span><span class="n" id="barra-n">0</span>La tua comanda</span><span id="barra-txt">Vedi e invia ›</span></button></div>
 
@@ -376,11 +409,13 @@ let persone = { adulti: 2, bambini: 0 };
 let menuScelto = null;
 let timerConto = null;
 let allergeniEsclusi = new Set();   // id degli allergeni da nascondere
+let testoCerca = '';                // ricerca prodotto (minuscolo, senza accenti)
 
 // ---------- utilità ----------
 function mostra(vista) {
   ['v-caricamento', 'v-errore', 'v-apertura', 'v-menu'].forEach(v => $(v).classList.toggle('hidden', v !== vista));
   $('barra').classList.toggle('hidden', vista !== 'v-menu' || !carrello.length);
+  aggiornaStrumenti();
 }
 function errore(msg) { $('testo-errore').textContent = msg; mostra('v-errore'); }
 function toast(msg, ko) {
@@ -596,9 +631,14 @@ function passaAllergeni(p) {
   if (!allergeniEsclusi.size) return true;
   return !(p.allergeni || []).some(a => allergeniEsclusi.has(a.id));
 }
+function senzaAccenti(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function passaCerca(p) {
+  if (!testoCerca) return true;
+  return senzaAccenti(p.nome).includes(testoCerca) || senzaAccenti(p.descrizione).includes(testoCerca);
+}
 function disegnaMenu() {
   const cats = catalogo.categorie
-    .map(c => ({ ...c, prodotti: catalogo.prodotti.filter(p => p.categoria_id === c.id && visibile(p) && passaAllergeni(p)) }))
+    .map(c => ({ ...c, prodotti: catalogo.prodotti.filter(p => p.categoria_id === c.id && visibile(p) && passaAllergeni(p) && passaCerca(p)) }))
     .filter(c => c.prodotti.length);
   let gruppoPrec = null;
   $('tabs-cat').innerHTML = cats.map((c, i) => {
@@ -615,7 +655,7 @@ function disegnaMenu() {
     return `${band}<section class="categoria" id="cat-${c.id}"><h3>${esc(d.label)}</h3>
       <div class="griglia">${c.prodotti.map(p => schedaProdotto(p)).join('')}</div>
     </section>`;
-  }).join('') : `<div class="vuoto">${allergeniEsclusi.size ? 'Nessun piatto senza gli allergeni selezionati.<br><button class="btn sec" style="max-width:220px;margin:14px auto 0" onclick="azzeraFiltri()">Mostra tutto</button>' : 'Nessun piatto disponibile in questo menu.'}</div>`;
+  }).join('') : `<div class="vuoto">${testoCerca ? 'Nessun prodotto trovato per «' + esc(testoCerca) + '».' : allergeniEsclusi.size ? 'Nessun piatto senza gli allergeni selezionati.<br><button class="btn sec" style="max-width:220px;margin:14px auto 0" onclick="azzeraFiltri()">Mostra tutto</button>' : 'Nessun piatto disponibile in questo menu.'}</div>`;
   document.querySelectorAll('[data-vai]').forEach(b => b.onclick = () => {
     document.getElementById('cat-' + b.dataset.vai).scrollIntoView({ behavior: 'smooth' });
   });
@@ -766,7 +806,7 @@ function posizionaFaro() {
 }
 let rafFaro = 0;
 window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(() => { posizionaFaro(); fisheyeProdotti(); }); }, { passive: true });
-window.addEventListener('resize', () => { aggiornaRuota(); posizionaFaro(); fisheyeProdotti(); });
+window.addEventListener('resize', () => { aggiornaRuota(); posizionaFaro(); fisheyeProdotti(); aggiornaStrumenti(); });
 
 // ---------- filtro allergeni ----------
 function aggiornaBarraFiltri() {
@@ -887,6 +927,18 @@ function aggiornaBarra() {
   const tot = carrello.reduce((s, r) => s + prezzoRiga(r), 0);
   $('barra-txt').textContent = tot ? `${euro(tot)} ›` : 'Vedi e invia ›';
   $('barra').classList.toggle('hidden', !n || $('v-menu').classList.contains('hidden'));
+  aggiornaStrumenti();
+}
+// posiziona la barra strumenti sopra il carrello e lascia lo spazio in fondo alla pagina
+function aggiornaStrumenti() {
+  const str = $('barra-strumenti'); if (!str) return;
+  const vmenu = !$('v-menu').classList.contains('hidden');
+  str.classList.toggle('hidden', !vmenu);
+  if (!vmenu) { document.body.style.removeProperty('--spazio-fondo'); return; }
+  const barra = $('barra');
+  const hCart = barra && !barra.classList.contains('hidden') ? barra.offsetHeight : 0;
+  str.style.bottom = hCart + 'px';
+  document.body.style.setProperty('--spazio-fondo', (hCart + str.offsetHeight + 14) + 'px');
 }
 function disegnaCarrello() {
   if (!carrello.length) { $('carr-corpo').innerHTML = '<div class="vuoto">La comanda è vuota.</div>'; $('btn-invia').disabled = true; return; }
@@ -979,11 +1031,28 @@ function disegnaComande() {
 }
 document.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => {
   document.querySelectorAll('[data-vista]').forEach(x => x.classList.toggle('on', x === b));
-  $('sotto-ordina').classList.toggle('hidden', b.dataset.vista !== 'ordina');
-  $('sotto-comande').classList.toggle('hidden', b.dataset.vista !== 'comande');
+  const inOrdina = b.dataset.vista === 'ordina';
+  $('sotto-ordina').classList.toggle('hidden', !inOrdina);
+  $('sotto-comande').classList.toggle('hidden', inOrdina);
   const conAll = (catalogo && (catalogo.allergeni || []).length);
-  $('barra-filtri').classList.toggle('hidden', b.dataset.vista !== 'ordina' || !conAll);
+  $('barra-filtri').classList.toggle('hidden', !inOrdina || !conAll);
+  $('cerca-box').classList.toggle('hidden', !inOrdina);   // la ricerca solo nel menu
+  aggiornaStrumenti();
 });
+
+// ---------- ricerca prodotto ----------
+let rafCerca = 0;
+function applicaCerca(v) {
+  testoCerca = senzaAccenti(v).trim();
+  $('cerca-x').classList.toggle('hidden', !v);
+  cancelAnimationFrame(rafCerca);
+  rafCerca = requestAnimationFrame(() => { if (catalogo) disegnaMenu(); });
+}
+(function collegaCerca() {
+  const inp = $('cerca-prod'); if (!inp) return;
+  inp.addEventListener('input', e => applicaCerca(e.target.value));
+  $('cerca-x').onclick = () => { inp.value = ''; applicaCerca(''); inp.focus(); };
+})();
 
 // ---------- aggiornamento periodico (altri telefoni, chiusura del conto) ----------
 async function controllaSessione() {
