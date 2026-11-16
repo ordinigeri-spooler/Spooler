@@ -469,6 +469,12 @@
           <label for="tv-scadenza">Chiudi da sola una sessione dopo (ore)</label>
           <input type="number" id="tv-scadenza" min="1" value="6">
           <p class="tv-hint">Di solito il tavolo si chiude da solo quando chiudi il conto su Geri; questo è solo un paracadute.</p>
+          <h3 style="margin-top:18px;">Aspetto della pagina cliente</h3>
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" id="tv-categorie-laterali" style="width:18px; height:18px;">
+            <span>Categorie a sinistra (invece che in alto)</span>
+          </label>
+          <p class="tv-hint">Come appaiono le categorie del menu nella pagina che vede il cliente col QR.</p>
           <div class="msg" id="tv-imp-msg"></div>
           <button type="submit" style="width:100%; margin-top:14px;">Salva regole</button>
         </form>
@@ -5202,10 +5208,11 @@ const ICONE_CATEGORIA_BASE64 = {
 
   // ---------- regole ----------
   async function tvCaricaImpostazioni() {
-    const { data } = await sbClient.from('impostazioni_locale').select('tavolo_max_pezzi_persona, tavolo_minuti_riordino, tavolo_ore_scadenza').eq('tenant_id', currentTenantId).maybeSingle();
+    const { data } = await sbClient.from('impostazioni_locale').select('tavolo_max_pezzi_persona, tavolo_minuti_riordino, tavolo_ore_scadenza, categorie_laterali').eq('tenant_id', currentTenantId).maybeSingle();
     document.getElementById('tv-max-pezzi').value = data && data.tavolo_max_pezzi_persona != null ? data.tavolo_max_pezzi_persona : '';
     document.getElementById('tv-minuti').value = data ? data.tavolo_minuti_riordino : 0;
     document.getElementById('tv-scadenza').value = data ? data.tavolo_ore_scadenza : 6;
+    document.getElementById('tv-categorie-laterali').checked = !!(data && data.categorie_laterali);
   }
   document.getElementById('form-tv-impostazioni').addEventListener('submit', async e => {
     e.preventDefault();
@@ -5213,6 +5220,7 @@ const ICONE_CATEGORIA_BASE64 = {
       tavolo_max_pezzi_persona: parseInt(document.getElementById('tv-max-pezzi').value) || null,
       tavolo_minuti_riordino: Math.max(0, parseInt(document.getElementById('tv-minuti').value) || 0),
       tavolo_ore_scadenza: Math.max(1, parseInt(document.getElementById('tv-scadenza').value) || 6),
+      categorie_laterali: document.getElementById('tv-categorie-laterali').checked,
     };
     const { data: esiste } = await sbClient.from('impostazioni_locale').select('id').eq('tenant_id', currentTenantId).maybeSingle();
     const { error } = esiste
