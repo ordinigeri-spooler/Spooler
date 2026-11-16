@@ -60,7 +60,7 @@
   .stato.attesa { background: #fff4e5; border-color: #f0c88a; }
   .stato b { font-family: 'Baloo 2'; font-size: 18px; }
   .tabs-viste { display: flex; gap: 8px; margin-top: 12px; }
-  .tabs-viste button { flex: 1; padding: 12px; border-radius: 15px; background: rgba(51,66,31,.08); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1.5px solid rgba(51,66,31,.12); color: var(--verde); font-weight: 700; }
+  .tabs-viste button { flex: 1; padding: 12px; border-radius: 15px; background: rgba(240,244,234,.82); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1.5px solid rgba(51,66,31,.18); color: var(--verde); font-weight: 700; }
   .tabs-viste button.on { background: var(--verde); border-color: var(--verde); color: #fff; box-shadow: 0 6px 16px rgba(51,66,31,.28); }
 
   /* categorie — in alto (default) */
@@ -120,11 +120,21 @@
   body.cat-left nav.cat button {
     flex: 1 1 auto; min-height: 58px; display: flex; align-items: center; justify-content: center;
     white-space: normal; text-align: center; font-size: 15px; font-weight: 700; line-height: 1.15;
-    padding: 10px 8px; border: 0; border-radius: 20px;
-    background: var(--panel); color: var(--ink);
-    box-shadow: 0 6px 16px rgba(93,151,201,.42);
+    padding: 10px 8px; border: 1px solid rgba(255,255,255,.65); border-radius: 22px;
+    background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
+    box-shadow: 0 7px 18px rgba(93,151,201,.45), inset 0 1px 0 rgba(255,255,255,.9);
+    position: relative; overflow: hidden;
   }
-  body.cat-left nav.cat button.on { background: #79aed6; color: #fff; box-shadow: 0 9px 22px rgba(93,151,201,.6); }
+  /* riflesso diagonale "glass" */
+  body.cat-left nav.cat button::after {
+    content: ''; position: absolute; top: -40%; left: -30%; width: 90%; height: 60%;
+    background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
+    transform: rotate(-18deg); pointer-events: none; border-radius: 50%;
+  }
+  body.cat-left nav.cat button.on {
+    background: linear-gradient(150deg, #9cc6e8 0%, #5b97c9 100%); color: #fff; border-color: rgba(255,255,255,.4);
+    box-shadow: 0 12px 26px rgba(74,130,180,.6), inset 0 1px 0 rgba(255,255,255,.45);
+  }
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
   body.cat-left nav.cat .cat-gruppo {
@@ -208,7 +218,7 @@
 
   /* barra filtro allergeni */
   .barra-filtri { display: flex; gap: 8px; align-items: center; margin: 10px 0 0; }
-  .chip-filtro { background: rgba(61,134,198,.12); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1.5px solid rgba(61,134,198,.35); border-radius: 99px; padding: 10px 16px; font-weight: 700; font-size: 14px; color: #2f6ea3; display: inline-flex; align-items: center; gap: 7px; }
+  .chip-filtro { background: rgba(226,238,249,.82); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1.5px solid rgba(61,134,198,.45); border-radius: 99px; padding: 10px 16px; font-weight: 700; font-size: 14px; color: #2f6ea3; display: inline-flex; align-items: center; gap: 7px; }
   .chip-filtro.attivo { background: #3d86c6; border-color: #3d86c6; color: #fff; box-shadow: 0 6px 16px rgba(61,134,198,.38); }
   .chip-filtro .fn { background: #fff; color: #2f6ea3; border-radius: 99px; padding: 1px 8px; font-size: 12px; font-weight: 800; }
   .barra-filtri .azzera { background: transparent; color: #2f6ea3; font-weight: 700; font-size: 13px; padding: 6px; }
