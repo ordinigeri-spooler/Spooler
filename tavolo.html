@@ -184,6 +184,18 @@
   .comanda-storico ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
   .comanda-storico li small { color: var(--ink-dim); }
   .vuoto { text-align: center; color: var(--ink-dim); padding: 40px 10px; }
+
+  /* barra filtro allergeni */
+  .barra-filtri { display: flex; gap: 8px; align-items: center; margin: 10px 0 0; }
+  .chip-filtro { background: var(--panel); border: 1.5px solid var(--border); border-radius: 99px; padding: 9px 15px; font-weight: 700; font-size: 14px; color: var(--ink); display: inline-flex; align-items: center; gap: 7px; }
+  .chip-filtro.attivo { border-color: var(--accent); color: var(--accent); }
+  .chip-filtro .fn { background: var(--accent); color: #fff; border-radius: 99px; padding: 1px 8px; font-size: 12px; font-weight: 800; }
+  .barra-filtri .azzera { background: transparent; color: var(--accent); font-weight: 700; font-size: 13px; padding: 6px; }
+  .filtro-riga { display: flex; align-items: center; gap: 12px; padding: 13px 2px; border-bottom: 1px solid var(--border); font-size: 15.5px; cursor: pointer; }
+  .filtro-riga .ic { font-size: 21px; }
+  .filtro-riga .sel { margin-left: auto; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; color: transparent; font-size: 15px; font-weight: 900; }
+  .filtro-riga.attivo .sel { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .filtro-riga.attivo { color: var(--accent); font-weight: 700; }
   .toast { position: fixed; left: 50%; top: calc(84px + env(safe-area-inset-top)); transform: translateX(-50%); background: var(--ok); color: #fff; padding: 12px 18px; border-radius: 12px; z-index: 60; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,.2); max-width: 92vw; text-align: center; }
   .toast.ko { background: var(--error); }
   .caricamento { padding: 80px 0; text-align: center; color: var(--ink-dim); }
@@ -223,6 +235,10 @@
   <div id="v-menu" class="hidden">
     <div class="stato" id="stato-comanda"></div>
     <div class="tabs-viste"><button class="on" data-vista="ordina">Menu</button><button data-vista="comande">Le comande <span id="n-comande"></span></button></div>
+    <div class="barra-filtri hidden" id="barra-filtri">
+      <button class="chip-filtro" id="btn-filtri">🔎 Allergeni<span class="fn hidden" id="filtri-n">0</span></button>
+      <button class="azzera hidden" id="btn-azzera-filtri">Mostra tutto ✕</button>
+    </div>
     <div id="sotto-ordina">
       <nav class="cat"><div class="scroll" id="tabs-cat"></div></nav>
       <div id="lista-prodotti"></div>
@@ -237,6 +253,12 @@
   <div class="testa"><h2 id="fp-nome"></h2><button class="chiudi" data-chiudi>✕</button></div>
   <div class="corpo" id="fp-corpo"></div>
   <div class="piede"><div style="display:flex;gap:12px;align-items:center"><div class="stepper"><button id="fp-meno">−</button><span id="fp-q">1</span><button id="fp-piu">+</button></div><button class="btn" id="fp-aggiungi" style="flex:1">Aggiungi</button></div></div>
+</div></div>
+
+<div class="velo hidden" id="velo-filtri"><div class="foglio">
+  <div class="testa"><h2>Filtra per allergeni</h2><button class="chiudi" data-chiudi>✕</button></div>
+  <div class="corpo" id="filtri-corpo"></div>
+  <div class="piede"><div style="display:flex;gap:12px"><button class="btn sec" id="btn-reset-filtri" style="flex:1">Azzera</button><button class="btn" id="btn-applica-filtri" style="flex:1">Fatto</button></div></div>
 </div></div>
 
 <div class="velo hidden" id="velo-carrello"><div class="foglio">
@@ -265,6 +287,7 @@ let carrello = [];          // [{ chiave, prodotto_id, nome, quantita, opzioni:[
 let persone = { adulti: 2, bambini: 0 };
 let menuScelto = null;
 let timerConto = null;
+let allergeniEsclusi = new Set();   // id degli allergeni da nascondere
 
 // ---------- utilità ----------
 function mostra(vista) {
@@ -333,7 +356,7 @@ async function caricaCatalogo() {
     p.gruppi = [...gruppi.values()].sort((a, b) => (a.ordine_visualizzazione || 0) - (b.ordine_visualizzazione || 0));
     p.gruppi.forEach(g => g.opzioni.sort((a, b) => a.nome.localeCompare(b.nome)));
   }
-  catalogo = { categorie: cat.data, prodotti: prod.data };
+  catalogo = { categorie: cat.data, prodotti: prod.data, allergeni: (alle.data || []).slice().sort((a, b) => a.nome.localeCompare(b.nome)) };
   return catalogo;
 }
 
@@ -461,6 +484,8 @@ async function entraNelMenu() {
   $('sub-testata').textContent = `${s.menu_nome} · ${personeSessione()} ${personeSessione() === 1 ? 'persona' : 'persone'}`;
   disegnaMenu();
   disegnaComande();
+  $('barra-filtri').classList.toggle('hidden', !((catalogo.allergeni || []).length));
+  aggiornaBarraFiltri();
   mostra('v-menu');
   aggiornaStato();
 }
@@ -470,9 +495,13 @@ function dividiCategoria(nome) {
   const m = /^(.*?)\s[-–]\s(.+)$/.exec(nome || '');
   return m ? { gruppo: m[1].trim(), label: m[2].trim() } : { gruppo: null, label: (nome || '').trim() };
 }
+function passaAllergeni(p) {
+  if (!allergeniEsclusi.size) return true;
+  return !(p.allergeni || []).some(a => allergeniEsclusi.has(a.id));
+}
 function disegnaMenu() {
   const cats = catalogo.categorie
-    .map(c => ({ ...c, prodotti: catalogo.prodotti.filter(p => p.categoria_id === c.id && visibile(p)) }))
+    .map(c => ({ ...c, prodotti: catalogo.prodotti.filter(p => p.categoria_id === c.id && visibile(p) && passaAllergeni(p)) }))
     .filter(c => c.prodotti.length);
   let gruppoPrec = null;
   $('tabs-cat').innerHTML = cats.map((c, i) => {
@@ -489,7 +518,7 @@ function disegnaMenu() {
     return `${band}<section class="categoria" id="cat-${c.id}"><h3>${esc(d.label)}</h3>
       <div class="griglia">${c.prodotti.map(p => schedaProdotto(p)).join('')}</div>
     </section>`;
-  }).join('') : '<div class="vuoto">Nessun piatto disponibile in questo menu.</div>';
+  }).join('') : `<div class="vuoto">${allergeniEsclusi.size ? 'Nessun piatto senza gli allergeni selezionati.<br><button class="btn sec" style="max-width:220px;margin:14px auto 0" onclick="azzeraFiltri()">Mostra tutto</button>' : 'Nessun piatto disponibile in questo menu.'}</div>`;
   document.querySelectorAll('[data-vai]').forEach(b => b.onclick = () => {
     document.getElementById('cat-' + b.dataset.vai).scrollIntoView({ behavior: 'smooth' });
   });
@@ -562,6 +591,32 @@ function osservaCategorie() {
   }, { rootMargin: '-140px 0px -60% 0px' });
   document.querySelectorAll('section.categoria').forEach(s => osservatore.observe(s));
 }
+
+// ---------- filtro allergeni ----------
+function aggiornaBarraFiltri() {
+  const n = allergeniEsclusi.size;
+  $('filtri-n').textContent = n; $('filtri-n').classList.toggle('hidden', !n);
+  $('btn-azzera-filtri').classList.toggle('hidden', !n);
+  $('btn-filtri').classList.toggle('attivo', !!n);
+}
+function apriFiltri() {
+  const alls = (catalogo && catalogo.allergeni) || [];
+  $('filtri-corpo').innerHTML = `<p class="muted" style="margin:4px 0 10px">Tocca gli allergeni da nascondere: i piatti che li contengono spariranno dal menu.</p>` +
+    (alls.length ? alls.map(a => `<label class="filtro-riga ${allergeniEsclusi.has(a.id) ? 'attivo' : ''}" data-all="${a.id}"><span class="ic">${esc(a.icona)}</span><span>${esc(a.nome)}</span><span class="sel">✓</span></label>`).join('')
+      : '<div class="vuoto">Nessun allergene indicato per questo menu.</div>');
+  $('filtri-corpo').querySelectorAll('[data-all]').forEach(el => el.onclick = () => {
+    const id = el.dataset.all;
+    if (allergeniEsclusi.has(id)) allergeniEsclusi.delete(id); else allergeniEsclusi.add(id);
+    el.classList.toggle('attivo');
+    aggiornaBarraFiltri(); disegnaMenu();
+  });
+  apri('velo-filtri');
+}
+function azzeraFiltri() { allergeniEsclusi.clear(); aggiornaBarraFiltri(); disegnaMenu(); }
+$('btn-filtri').onclick = apriFiltri;
+$('btn-azzera-filtri').onclick = azzeraFiltri;
+$('btn-applica-filtri').onclick = () => chiudi('velo-filtri');
+$('btn-reset-filtri').onclick = () => { azzeraFiltri(); apriFiltri(); };
 
 function aggiungi(p, n, opzioni, nota) {
   nota = (nota || '').trim();
@@ -750,6 +805,8 @@ document.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => {
   document.querySelectorAll('[data-vista]').forEach(x => x.classList.toggle('on', x === b));
   $('sotto-ordina').classList.toggle('hidden', b.dataset.vista !== 'ordina');
   $('sotto-comande').classList.toggle('hidden', b.dataset.vista !== 'comande');
+  const conAll = (catalogo && (catalogo.allergeni || []).length);
+  $('barra-filtri').classList.toggle('hidden', b.dataset.vista !== 'ordina' || !conAll);
 });
 
 // ---------- aggiornamento periodico (altri telefoni, chiusura del conto) ----------
