@@ -269,6 +269,18 @@
       rgba(255,249,230,.13) 58%,
       rgba(255,249,230,0) 74%);
   }
+  /* raggi che partono dalla categoria attiva (sinistra) e illuminano dietro i prodotti */
+  #faro-prodotti.da-categoria {
+    width: 430px; height: 360px; max-width: none; transform: translateY(-50%);
+    background:
+      repeating-conic-gradient(from -26deg at left center,
+        rgba(255,255,255,.10) 0deg 2.2deg, rgba(255,255,255,0) 2.2deg 8deg),
+      radial-gradient(ellipse 100% 60% at left center,
+        rgba(255,253,246,.92) 0%,
+        rgba(255,251,236,.46) 26%,
+        rgba(255,249,230,.16) 50%,
+        rgba(255,249,230,0) 70%);
+  }
 </style>
 </head>
 <body>
@@ -668,9 +680,29 @@ function osservaCategorie() {
       const on = b.dataset.vai === id; b.classList.toggle('on', on);
       if (on) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     });
+    posizionaFaro();
   }, { rootMargin: '-140px 0px -60% 0px' });
   document.querySelectorAll('section.categoria').forEach(s => osservatore.observe(s));
+  posizionaFaro();
 }
+
+// fa partire il faro dalla categoria attiva (a sinistra); la segue mentre scrolli
+function posizionaFaro() {
+  const faro = $('faro-prodotti'); if (!faro) return;
+  const on = document.querySelector('body.cat-left nav.cat button.on');
+  if (on) {
+    const r = on.getBoundingClientRect();
+    faro.classList.add('da-categoria');
+    faro.style.left = (r.right - 26) + 'px';
+    faro.style.top = (r.top + r.height / 2) + 'px';
+  } else {
+    faro.classList.remove('da-categoria');
+    faro.style.left = ''; faro.style.top = '';
+  }
+}
+let rafFaro = 0;
+window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(posizionaFaro); }, { passive: true });
+window.addEventListener('resize', posizionaFaro);
 
 // ---------- filtro allergeni ----------
 function aggiornaBarraFiltri() {
