@@ -286,28 +286,25 @@
   }
 
   /* faro: illumina lo sfondo DIETRO le card (le card hanno z-index più alto e restano davanti) */
-  #faro-prodotti {
-    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    width: 150vw; height: 92vh; max-width: 900px; pointer-events: none; z-index: 1;
-    mix-blend-mode: screen;
-    background: radial-gradient(ellipse at center,
-      rgba(255,253,246,.72) 0%,
-      rgba(255,252,240,.60) 24%,
-      rgba(255,250,234,.34) 44%,
-      rgba(255,249,230,.13) 58%,
-      rgba(255,249,230,0) 74%);
-  }
-  /* luce soffusa che parte sfumata dalla categoria attiva (sinistra) e va verso i prodotti, dietro alle schede */
-  #faro-prodotti.da-categoria {
-    width: 520px; height: 440px; max-width: none; transform: translateY(-50%);
-    filter: blur(10px);
+  /* FARI DA PALCOSCENICO: due raggi chiari (da sinistra e da destra) che convergono sul
+     prodotto al centro mentre si scrolla, come due luci puntate sullo stesso punto. Dietro alle schede. */
+  #faro-prodotti { display: none; }
+  body.cat-left #faro-prodotti {
+    display: block; position: fixed; inset: 0; width: 100%; height: 100%;
+    max-width: none; transform: none; pointer-events: none; z-index: 1;
+    mix-blend-mode: screen; filter: blur(3px);
     background:
-      radial-gradient(ellipse 100% 52% at left center,
-        rgba(255,252,240,.82) 0%,
-        rgba(255,250,232,.44) 22%,
-        rgba(255,249,230,.18) 44%,
-        rgba(255,249,230,.06) 62%,
-        rgba(255,249,230,0) 76%);
+      /* alone sul punto a fuoco (il prodotto al centro) */
+      radial-gradient(ellipse 24% 13% at 60% 50%,
+        rgba(255,253,244,.80) 0%, rgba(255,251,236,.30) 46%, rgba(255,251,236,0) 72%),
+      /* raggio da destra (punta a sinistra, verso il centro) + raggio da sinistra (punta a destra) */
+      conic-gradient(from 0deg at 60% 50%,
+        rgba(255,251,236,0) 74deg,
+        rgba(255,251,236,.55) 90deg,
+        rgba(255,251,236,0) 106deg,
+        rgba(255,251,236,0) 254deg,
+        rgba(255,251,236,.55) 270deg,
+        rgba(255,251,236,0) 286deg);
   }
 </style>
 </head>
@@ -663,7 +660,6 @@ function disegnaMenu() {
   osservaCategorie();
   aggiornaRuota();
   fisheyeProdotti();
-  posizionaFaro();
   aggiornaBarra();
 }
 
@@ -729,10 +725,8 @@ function osservaCategorie() {
       if (on && !document.body.classList.contains('cat-left')) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     });
     aggiornaRuota();
-    posizionaFaro();
   }, { rootMargin: '-140px 0px -60% 0px' });
   document.querySelectorAll('section.categoria').forEach(s => osservatore.observe(s));
-  posizionaFaro();
 }
 
 // RUOTA categorie infinita: l'attiva grande al centro, le altre a scalare sopra/sotto;
@@ -791,24 +785,10 @@ function fisheyeProdotti() {
   });
 }
 
-// luce soffusa che parte sfumata dalla categoria ATTIVA (sinistra) e va verso i prodotti, dietro alle schede
-function posizionaFaro() {
-  const faro = $('faro-prodotti'); if (!faro) return;
-  const att = document.querySelector('body.cat-left nav.cat button.on')
-           || document.querySelector('body.cat-left nav.cat');
-  if (att) {
-    const r = att.getBoundingClientRect();
-    faro.classList.add('da-categoria');
-    faro.style.left = (r.left + r.width * 0.5) + 'px';   // sorgente sulla categoria attiva
-    faro.style.top = (r.top + r.height / 2) + 'px';
-  } else {
-    faro.classList.remove('da-categoria');
-    faro.style.left = ''; faro.style.top = '';
-  }
-}
+// i fari da palcoscenico sono statici (CSS, fissi sul centro schermo): nessun posizionamento JS
 let rafFaro = 0;
-window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(() => { posizionaFaro(); fisheyeProdotti(); }); }, { passive: true });
-window.addEventListener('resize', () => { aggiornaRuota(); posizionaFaro(); fisheyeProdotti(); aggiornaStrumenti(); });
+window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(fisheyeProdotti); }, { passive: true });
+window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); aggiornaStrumenti(); });
 
 // ---------- filtro allergeni ----------
 function aggiornaBarraFiltri() {
