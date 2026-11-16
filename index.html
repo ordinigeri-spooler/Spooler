@@ -2894,8 +2894,9 @@ const ICONE_CATEGORIA_BASE64 = {
         if (!cartProd || !nomeFile) return;
         const codice = estraiCodiceCartella(cartProd);
         if (codice == null) return;
-        if (!perCodice.has(codice)) perCodice.set(codice, { descrizione: '', allergeni: new Set(), fotoPath: null });
+        if (!perCodice.has(codice)) perCodice.set(codice, { descrizione: '', nome: '', allergeni: new Set(), fotoPath: null });
         const rec = perCodice.get(codice);
+        if (!rec.nome) rec.nome = cartProd.replace(/^\s*\d+\s*-\s*/, '').trim(); // nome dalla cartella (ripiego)
         const low = nomeFile.toLowerCase();
         if (low === 'foto.jpg' || low === 'foto.jpeg' || low === 'foto.png') rec.fotoPath = path;
         else if (low === 'descrizione.txt') rec._descPath = path;
@@ -2905,7 +2906,12 @@ const ICONE_CATEGORIA_BASE64 = {
 
       // leggo i txt dentro ogni cartella
       for (const [, rec] of perCodice) {
-        if (rec._descPath) rec.descrizione = valoreDopoEtichetta(await zip.file(rec._descPath).async('string'), 'Descrizione');
+        if (rec._descPath) {
+          const t = await zip.file(rec._descPath).async('string');
+          rec.descrizione = valoreDopoEtichetta(t, 'Descrizione');
+          const nomeTxt = valoreDopoEtichetta(t, 'Nome'); // nome pulito dal file (preferito)
+          if (nomeTxt) rec.nome = nomeTxt;
+        }
         if (rec._allPath) allergeniDaTxt(await zip.file(rec._allPath).async('string')).forEach(a => rec.allergeni.add(a));
       }
 
@@ -2915,10 +2921,15 @@ const ICONE_CATEGORIA_BASE64 = {
         .select('id, nome, codice_geri').eq('tenant_id', currentTenantId);
       if (errProd) throw errProd;
       const prodPerCodice = new Map();
+      const prodPerNome = new Map();
+      const normNome = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
       (prodotti || []).forEach(p => {
-        if (p.codice_geri == null) return;
-        if (!prodPerCodice.has(p.codice_geri)) prodPerCodice.set(p.codice_geri, []);
-        prodPerCodice.get(p.codice_geri).push(p);
+        if (p.codice_geri != null) {
+          if (!prodPerCodice.has(p.codice_geri)) prodPerCodice.set(p.codice_geri, []);
+          prodPerCodice.get(p.codice_geri).push(p);
+        }
+        const k = normNome(p.nome);
+        if (k) { if (!prodPerNome.has(k)) prodPerNome.set(k, []); prodPerNome.get(k).push(p); }
       });
 
       // 3) creo gli allergeni mancanti (mappando i nomi del menu su quelli standard)
@@ -2942,16 +2953,45 @@ const ICONE_CATEGORIA_BASE64 = {
         (creati || []).forEach(a => allPerNome.set(a.nome.trim().toLowerCase(), a));
       }
 
-      // 4) applico, prodotto per prodotto
+      // 4) abbino ogni voce dello ZIP a UN prodotto del sito.
+      //    Priorità al NOME (identità vera del piatto: regge anche se i numeri sono scambiati),
+      //    col numero come conferma o ripiego. Ciò che è incerto NON viene toccato: va in "da controllare".
+      const usati = new Set(); // id prodotto già abbinato, per non scrivere due voci sullo stesso
+      function risolviProdotto(codice, nome) {
+        const perNome = (prodPerNome.get(normNome(nome)) || []).filter(p => !usati.has(p.id));
+        const perCod = (prodPerCodice.get(codice) || []).filter(p => !usati.has(p.id));
+        // 1) numero E nome concordano -> sicuro
+        let p = perNome.find(x => x.codice_geri === codice);
+        if (p) return { p, tipo: 'ok' };
+        // 2) un solo prodotto con quel nome -> abbino per nome (anche se il numero differisce = scambiato)
+        if (perNome.length === 1) return { p: perNome[0], tipo: 'nome', numeroSito: perNome[0].codice_geri };
+        // 3) più prodotti con lo stesso nome e nessuno col numero giusto -> ambiguo
+        if (perNome.length > 1) return { p: null, tipo: 'nome-doppio' };
+        // 4) nome non trovato ma il numero sì -> abbino per numero (nome solo diverso a parole)
+        if (perCod.length === 1) return { p: perCod[0], tipo: 'numero', nomeSito: perCod[0].nome };
+        if (perCod.length > 1) return { p: null, tipo: 'numero-doppio' };
+        return { p: null, tipo: 'assente' };
+      }
+
       const codici = [...perCodice.keys()].sort((a, b) => a - b);
-      let aggiornati = 0, foto = 0; const nonTrovati = [];
+      let foto = 0;
+      const okList = [], perNomeList = [], perNumeroList = [], daControllare = [];
       let i = 0;
       for (const codice of codici) {
         i++;
         const rec = perCodice.get(codice);
-        const matches = prodPerCodice.get(codice);
-        stato.innerHTML = `Elaboro ${i}/${codici.length} — numero ${codice}…<br>Prodotti aggiornati: ${aggiornati} · Foto: ${foto}`;
-        if (!matches || !matches.length) { nonTrovati.push(codice); continue; }
+        stato.innerHTML = `Elaboro ${i}/${codici.length} — ${escapeHtml(rec.nome || ('n. ' + codice))}…<br>Abbinati: ${okList.length + perNomeList.length + perNumeroList.length} · Foto: ${foto} · Da controllare: ${daControllare.length}`;
+
+        const r = risolviProdotto(codice, rec.nome);
+        const etZip = `#${codice} ${escapeHtml(rec.nome || '')}`.trim();
+        if (!r.p) {
+          let perche = 'nessun prodotto con questo numero né con questo nome';
+          if (r.tipo === 'nome-doppio') perche = 'più prodotti sul sito hanno questo nome e nessuno ha il numero ' + codice;
+          else if (r.tipo === 'numero-doppio') perche = 'più prodotti sul sito hanno il numero ' + codice;
+          daControllare.push(`${etZip} — ${perche}`);
+          continue;
+        }
+        usati.add(r.p.id);
 
         // foto: percorso stabile per numero, così un nuovo import sovrascrive invece di accumulare
         let immagineUrl = null;
@@ -2972,27 +3012,32 @@ const ICONE_CATEGORIA_BASE64 = {
           .map(a => allPerNome.get(nomeStd(a).toLowerCase()))
           .filter(Boolean).map(a => a.id);
 
-        for (const p of matches) {
-          const payload = {};
-          if (rec.descrizione) payload.descrizione = rec.descrizione;
-          if (immagineUrl) payload.immagine_url = immagineUrl;
-          if (Object.keys(payload).length) {
-            const { error: errU } = await sbClient.from('prodotti').update(payload).eq('id', p.id);
-            if (errU) throw errU;
-          }
-          // allergeni: sostituisco quelli del prodotto con quelli del menu
-          await sbClient.from('prodotti_allergeni').delete().eq('prodotto_id', p.id);
-          if (idAllergeni.length) {
-            await sbClient.from('prodotti_allergeni').insert(idAllergeni.map(aid => ({ prodotto_id: p.id, allergene_id: aid })));
-          }
-          aggiornati++;
+        const payload = {};
+        if (rec.descrizione) payload.descrizione = rec.descrizione;
+        if (immagineUrl) payload.immagine_url = immagineUrl;
+        if (Object.keys(payload).length) {
+          const { error: errU } = await sbClient.from('prodotti').update(payload).eq('id', r.p.id);
+          if (errU) throw errU;
         }
+        // allergeni: sostituisco quelli del prodotto con quelli del menu
+        await sbClient.from('prodotti_allergeni').delete().eq('prodotto_id', r.p.id);
+        if (idAllergeni.length) {
+          await sbClient.from('prodotti_allergeni').insert(idAllergeni.map(aid => ({ prodotto_id: r.p.id, allergene_id: aid })));
+        }
+
+        if (r.tipo === 'ok') okList.push(etZip);
+        else if (r.tipo === 'nome') perNomeList.push(`${etZip} → sul sito aveva numero ${r.numeroSito ?? '—'}`);
+        else perNumeroList.push(`${etZip} → sul sito si chiama "${escapeHtml(r.nomeSito)}"`);
       }
 
       // 5) riepilogo
-      let msg = `<b>Fatto.</b><br>Prodotti aggiornati: ${aggiornati}<br>Foto caricate: ${foto}`;
-      if (daCreare.length) msg += `<br>Allergeni creati: ${daCreare.length} (${daCreare.map(a => a.nome).join(', ')})`;
-      if (nonTrovati.length) msg += `<br><br>Numeri nello ZIP senza prodotto corrispondente sul sito (${nonTrovati.length}): ${nonTrovati.join(', ')}<br><span style="color:var(--ink-dim)">Di solito bevande/liquori senza codice su Geri, o prodotti non ancora importati dal catalogo.</span>`;
+      const abbinati = okList.length + perNomeList.length + perNumeroList.length;
+      let msg = `<b>Fatto.</b><br>Prodotti abbinati e aggiornati: ${abbinati}<br>Foto caricate: ${foto}`;
+      if (daCreare.length) msg += `<br>Allergeni creati: ${daCreare.length} (${escapeHtml(daCreare.map(a => a.nome).join(', '))})`;
+      msg += `<br><br>• Numero e nome coincidono: ${okList.length}`;
+      if (perNomeList.length) msg += `<br><br><b>Abbinati per NOME</b> perché il numero era diverso (${perNomeList.length}):<br><span style="color:var(--ink-dim); font-size:13px">${perNomeList.join('<br>')}</span>`;
+      if (perNumeroList.length) msg += `<br><br><b>Abbinati per NUMERO</b> (nome scritto diverso sul sito, ${perNumeroList.length}) — dai un'occhiata:<br><span style="color:var(--ink-dim); font-size:13px">${perNumeroList.join('<br>')}</span>`;
+      if (daControllare.length) msg += `<br><br><b style="color:#c0392b">Da controllare a mano</b> (${daControllare.length}) — NON modificati:<br><span style="color:var(--ink-dim); font-size:13px">${daControllare.map(escapeHtml).join('<br>')}</span><br><span style="color:var(--ink-dim); font-size:12px">Di solito bevande/liquori senza codice su Geri, o prodotti non ancora importati dal catalogo.</span>`;
       stato.innerHTML = msg;
       await caricaProdotti();
       if (typeof caricaAllergeni === 'function') await caricaAllergeni();
