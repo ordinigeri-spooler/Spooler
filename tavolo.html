@@ -256,6 +256,19 @@
       -1.3px 1.3px 0 rgba(255,255,255,.98), 1.3px 1.3px 0 rgba(255,255,255,.98),
       0 0 9px rgba(255,255,255,.95);
   }
+
+  /* faro soffuso fisso al centro: illumina da dietro i prodotti che stai guardando mentre scrolli */
+  #faro-prodotti {
+    position: fixed; left: 50%; top: 52%; transform: translate(-50%, -50%);
+    width: 142vw; height: 84vh; max-width: 840px; pointer-events: none; z-index: -1;
+    background: radial-gradient(ellipse at center,
+      rgba(255,250,235,.82) 0%,
+      rgba(255,250,235,.52) 15%,
+      rgba(255,250,235,.26) 32%,
+      rgba(255,250,235,.09) 50%,
+      rgba(255,250,235,0) 68%);
+    filter: blur(4px);
+  }
 </style>
 </head>
 <body>
@@ -290,6 +303,7 @@
 
   <!-- 2. Ordinazione -->
   <div id="v-menu" class="hidden">
+    <div id="faro-prodotti" aria-hidden="true"></div>
     <div class="stato" id="stato-comanda"></div>
     <div class="tabs-viste"><button class="on" data-vista="ordina">Menu</button><button data-vista="comande">Le comande <span id="n-comande"></span></button></div>
     <div class="barra-filtri hidden" id="barra-filtri">
