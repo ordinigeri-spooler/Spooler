@@ -111,24 +111,25 @@
     height: calc(100dvh - 150px);
   }
   body.cat-left nav.cat .scroll {
-    display: flex; flex-direction: column; gap: 0; padding: 0; height: 100%;
+    display: flex; flex-direction: column; gap: 10px; padding: 3px; height: 100%;
     overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
-    background: var(--panel); border: 1.5px solid var(--border); border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    background: transparent; border: 0; border-radius: 0; box-shadow: none;
   }
   body.cat-left nav.cat .scroll::-webkit-scrollbar { display: none; }
+  /* card categoria: stessa forma delle card prodotto + ombra esterna celeste */
   body.cat-left nav.cat button {
-    flex: 1 1 auto; min-height: 56px; display: flex; align-items: center; justify-content: center;
+    flex: 1 1 auto; min-height: 58px; display: flex; align-items: center; justify-content: center;
     white-space: normal; text-align: center; font-size: 15px; font-weight: 700; line-height: 1.15;
-    padding: 10px 8px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0;
-    background: transparent; color: var(--ink); box-shadow: none;
+    padding: 10px 8px; border: 0; border-radius: 20px;
+    background: var(--panel); color: var(--ink);
+    box-shadow: 0 6px 16px rgba(93,151,201,.42);
   }
-  body.cat-left nav.cat button:last-child { border-bottom: 0; }
-  body.cat-left nav.cat button.on { font-weight: 800; background: rgba(224,163,48,.16); color: #9a6a12; box-shadow: inset 4px 0 0 #e0a330; }
+  body.cat-left nav.cat button.on { background: #79aed6; color: #fff; box-shadow: 0 9px 22px rgba(93,151,201,.6); }
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
   body.cat-left nav.cat .cat-gruppo {
     display: block; flex: 0 0 auto; background: #e0a330; color: #fff; font-weight: 800; text-transform: uppercase;
-    font-size: 11.5px; letter-spacing: .5px; padding: 7px 12px; border-bottom: 1px solid rgba(0,0,0,.08);
+    font-size: 11.5px; letter-spacing: .5px; padding: 7px 10px; border-radius: 12px; text-align: center;
   }
   body.cat-left #lista-prodotti { flex: 1; min-width: 0; }
   /* colonna categorie stretta -> prodotti a 2-3 colonne */
