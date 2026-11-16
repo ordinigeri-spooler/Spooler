@@ -2915,20 +2915,21 @@ const ICONE_CATEGORIA_BASE64 = {
         if (rec._allPath) allergeniDaTxt(await zip.file(rec._allPath).async('string')).forEach(a => rec.allergeni.add(a));
       }
 
-      // 2) prodotti del locale, per codice_geri (= il numero)
+      // 2) prodotti del locale. Il "numero del menu" è quello scritto DENTRO al nome
+      //    (es. "168 Edamame" -> numero 168, nome "Edamame"), NON il codice interno di Geri.
       stato.innerHTML = 'Confronto con i prodotti del sito…';
       const { data: prodotti, error: errProd } = await sbClient.from('prodotti')
-        .select('id, nome, codice_geri').eq('tenant_id', currentTenantId);
+        .select('id, nome').eq('tenant_id', currentTenantId);
       if (errProd) throw errProd;
-      const prodPerCodice = new Map();
-      const prodPerNome = new Map();
       const normNome = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+      const numeroNelNome = nome => { const m = /^\s*(\d{1,6})\s*[-.)]?\s+(.+)$/.exec(nome || ''); return m ? { num: parseInt(m[1], 10), resto: m[2].trim() } : { num: null, resto: (nome || '').trim() }; };
+      const prodPerNumero = new Map(); // numero scritto nel nome -> prodotti
+      const prodPerNome = new Map();   // nome (senza il numero) -> prodotti
       (prodotti || []).forEach(p => {
-        if (p.codice_geri != null) {
-          if (!prodPerCodice.has(p.codice_geri)) prodPerCodice.set(p.codice_geri, []);
-          prodPerCodice.get(p.codice_geri).push(p);
-        }
-        const k = normNome(p.nome);
+        const info = numeroNelNome(p.nome);
+        p._numNome = info.num; p._resto = info.resto;
+        if (info.num != null) { if (!prodPerNumero.has(info.num)) prodPerNumero.set(info.num, []); prodPerNumero.get(info.num).push(p); }
+        const k = normNome(info.resto);
         if (k) { if (!prodPerNome.has(k)) prodPerNome.set(k, []); prodPerNome.get(k).push(p); }
       });
 
@@ -2959,17 +2960,17 @@ const ICONE_CATEGORIA_BASE64 = {
       const usati = new Set(); // id prodotto già abbinato, per non scrivere due voci sullo stesso
       function risolviProdotto(codice, nome) {
         const perNome = (prodPerNome.get(normNome(nome)) || []).filter(p => !usati.has(p.id));
-        const perCod = (prodPerCodice.get(codice) || []).filter(p => !usati.has(p.id));
-        // 1) numero E nome concordano -> sicuro
-        let p = perNome.find(x => x.codice_geri === codice);
+        const perNum = (prodPerNumero.get(codice) || []).filter(p => !usati.has(p.id));
+        // 1) numero-nel-nome E nome concordano -> sicuro
+        let p = perNome.find(x => x._numNome === codice);
         if (p) return { p, tipo: 'ok' };
         // 2) un solo prodotto con quel nome -> abbino per nome (anche se il numero differisce = scambiato)
-        if (perNome.length === 1) return { p: perNome[0], tipo: 'nome', numeroSito: perNome[0].codice_geri };
+        if (perNome.length === 1) return { p: perNome[0], tipo: 'nome', numeroSito: perNome[0]._numNome };
         // 3) più prodotti con lo stesso nome e nessuno col numero giusto -> ambiguo
         if (perNome.length > 1) return { p: null, tipo: 'nome-doppio' };
-        // 4) nome non trovato ma il numero sì -> abbino per numero (nome solo diverso a parole)
-        if (perCod.length === 1) return { p: perCod[0], tipo: 'numero', nomeSito: perCod[0].nome };
-        if (perCod.length > 1) return { p: null, tipo: 'numero-doppio' };
+        // 4) nome non trovato ma il numero sì -> abbino per numero (nome solo scritto diverso)
+        if (perNum.length === 1) return { p: perNum[0], tipo: 'numero', nomeSito: perNum[0].nome };
+        if (perNum.length > 1) return { p: null, tipo: 'numero-doppio' };
         return { p: null, tipo: 'assente' };
       }
 
