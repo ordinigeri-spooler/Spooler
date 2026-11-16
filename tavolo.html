@@ -110,7 +110,7 @@
      e l'anello gira avanti e indietro (dopo l'ultima torna la prima e viceversa) */
   body.cat-left nav.cat {
     position: sticky; top: calc(72px + env(safe-area-inset-top)); z-index: 10;
-    flex: 0 0 150px; margin: 0; padding: 0; align-self: flex-start; overflow: hidden;
+    flex: 0 0 116px; margin: 0; padding: 0; align-self: flex-start; overflow: hidden;
     height: calc(100dvh - 150px); background: transparent;
   }
   body.cat-left nav.cat .scroll {
@@ -141,10 +141,13 @@
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
   body.cat-left #lista-prodotti { flex: 1; min-width: 0; }
-  /* prodotti a ROULETTE: colonna singola, la card al centro è grande (vedi ruotaProdotti) */
-  body.cat-left .griglia { grid-template-columns: 1fr; gap: 6px; }
-  body.cat-left .prodotto { animation: none; transform-origin: center center; will-change: transform; }
-  body.cat-left .prodotto .foto, body.cat-left .prodotto .foto-vuota { aspect-ratio: 16/10; }
+  /* colonna categorie -> prodotti a 2 colonne */
+  body.cat-left .griglia { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px 8px; }
+  body.cat-left .prodotto .nome { font-size: 13px; }
+  body.cat-left .prodotto .foto, body.cat-left .prodotto .foto-vuota { border-radius: 16px; }
+  body.cat-left .prodotto .piu { width: 34px; height: 34px; font-size: 21px; }
+  body.cat-left .prodotto .agg { right: 6px; bottom: 6px; }
+  body.cat-left .prodotto .stepper button { width: 27px; height: 27px; font-size: 15px; }
   body.cat-left .prodotto .nome { font-size: 13px; }
   body.cat-left .prodotto .foto, body.cat-left .prodotto .foto-vuota { border-radius: 16px; }
   body.cat-left .prodotto .piu { width: 34px; height: 34px; font-size: 21px; }
@@ -618,7 +621,6 @@ function disegnaMenu() {
   collegaSchede();
   osservaCategorie();
   aggiornaRuota();
-  ruotaProdotti();
   aggiornaBarra();
 }
 
@@ -659,7 +661,6 @@ function ridisegnaScheda(id) {
     el.outerHTML = schedaProdotto(prodotto(pid));
   }
   collegaSchede();
-  ruotaProdotti();
 }
 function collegaSchede() {
   document.querySelectorAll('[data-card]').forEach(el => el.onclick = () => apriProdotto(el.dataset.card));
@@ -701,8 +702,8 @@ function aggiornaRuota() {
   const N = btns.length; if (!N) return;
   let att = btns.findIndex(b => b.classList.contains('on'));
   if (att < 0) att = 0;
-  const TAGLIE = [[23, 82], [17, 62], [14, 50], [12, 42]]; // [font, min-height] per distanza
-  const PASSO = 80;          // distanza verticale tra una categoria e l'altra
+  const TAGLIE = [[19, 66], [15, 52], [12.5, 44], [11.5, 38]]; // [font, min-height] per distanza
+  const PASSO = 68;          // distanza verticale tra una categoria e l'altra
   const VISIBILI = 3;        // quante categorie mostrare sopra e sotto l'attiva
   const centro = nav.clientHeight / 2;
   btns.forEach((b, i) => {
@@ -716,26 +717,6 @@ function aggiornaRuota() {
     b.style.zIndex = String(50 - ad);
     if (ad > VISIBILI) { b.style.opacity = '0'; b.style.pointerEvents = 'none'; }
     else { b.style.opacity = String(Math.max(0.45, 1 - ad * 0.2)); b.style.pointerEvents = ''; }
-  });
-}
-
-// ROULETTE prodotti: il prodotto al centro è grande, quelli sopra/sotto rimpiccioliscono (effetto ruota)
-function ruotaProdotti() {
-  if (!document.body.classList.contains('cat-left')) return;
-  const lista = $('lista-prodotti'); if (!lista) return;
-  const cards = lista.querySelectorAll('.prodotto');
-  if (!cards.length) return;
-  const rl = lista.getBoundingClientRect();
-  const centro = rl.top + Math.min(rl.height, window.innerHeight) / 2; // centro visibile della colonna
-  const raggio = window.innerHeight * 0.42;
-  cards.forEach(c => {
-    const r = c.getBoundingClientRect();
-    const dc = (r.top + r.height / 2) - centro;
-    const t = Math.min(Math.abs(dc) / raggio, 1);
-    const scala = 1 - t * 0.32;
-    c.style.transform = 'scale(' + scala.toFixed(3) + ')';
-    c.style.opacity = String(1 - t * 0.55);
-    c.style.zIndex = String(Math.round(100 - t * 100));
   });
 }
 
@@ -754,8 +735,8 @@ function posizionaFaro() {
   }
 }
 let rafFaro = 0;
-window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(() => { posizionaFaro(); ruotaProdotti(); }); }, { passive: true });
-window.addEventListener('resize', () => { aggiornaRuota(); posizionaFaro(); ruotaProdotti(); });
+window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(posizionaFaro); }, { passive: true });
+window.addEventListener('resize', () => { aggiornaRuota(); posizionaFaro(); });
 
 // ---------- filtro allergeni ----------
 function aggiornaBarraFiltri() {
