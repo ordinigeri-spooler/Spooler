@@ -231,6 +231,18 @@
   @keyframes sali-morbido { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .prodotto { animation: sali-morbido .28s cubic-bezier(.2,.8,.2,1) both; }
   @media (prefers-reduced-motion: reduce) { .prodotto { animation: none; } }
+
+  /* con sfondo foto: scritte nere e leggibili (alone chiaro, niente velo giallo) */
+  body.con-sfondo section.categoria h3,
+  body.con-sfondo .prodotto .nome,
+  body.con-sfondo .prodotto .desc,
+  body.con-sfondo .prodotto .limite,
+  body.con-sfondo .prodotto .gia,
+  body.con-sfondo .prodotto .prezzo,
+  body.con-sfondo .vuoto {
+    color: #111 !important;
+    text-shadow: 0 1px 2px rgba(255,255,255,.98), 0 0 6px rgba(255,255,255,.9);
+  }
 </style>
 </head>
 <body>
@@ -360,13 +372,13 @@ async function caricaLocale() {
     if (data.logo_url) { $('logo').src = data.logo_url; $('logo').classList.remove('hidden'); }
     document.body.classList.toggle('cat-left', !!data.categorie_laterali);
     if (data.sfondo_url) {
-      // immagine di sfondo con un velo crema sopra, così resta leggibile
-      const velo = 'linear-gradient(rgba(247,238,203,0.70), rgba(247,238,203,0.70))';
-      document.body.style.backgroundImage = `${velo}, url('${data.sfondo_url}')`;
-      document.body.style.backgroundSize = 'cover, cover';
-      document.body.style.backgroundPosition = 'center, center';
-      document.body.style.backgroundRepeat = 'no-repeat, no-repeat';
-      document.body.style.backgroundAttachment = 'fixed, fixed';
+      // immagine di sfondo piena, senza velo; le scritte diventano nere con alone chiaro
+      document.body.classList.add('con-sfondo');
+      document.body.style.backgroundImage = `url('${data.sfondo_url}')`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundAttachment = 'fixed';
     }
   }
 }
