@@ -354,11 +354,20 @@ async function caricaInfo() {
   return info;
 }
 async function caricaLocale() {
-  const { data } = await sb.from('impostazioni_locale').select('nome_locale, logo_url, categorie_laterali').eq('tenant_id', TENANT).maybeSingle();
+  const { data } = await sb.from('impostazioni_locale').select('nome_locale, logo_url, categorie_laterali, sfondo_url').eq('tenant_id', TENANT).maybeSingle();
   if (data) {
     if (data.nome_locale) { $('nome-locale').textContent = data.nome_locale; document.title = data.nome_locale + ' — Tavolo ' + TAVOLO; }
     if (data.logo_url) { $('logo').src = data.logo_url; $('logo').classList.remove('hidden'); }
     document.body.classList.toggle('cat-left', !!data.categorie_laterali);
+    if (data.sfondo_url) {
+      // immagine di sfondo con un velo crema sopra, così resta leggibile
+      const velo = 'linear-gradient(rgba(247,238,203,0.70), rgba(247,238,203,0.70))';
+      document.body.style.backgroundImage = `${velo}, url('${data.sfondo_url}')`;
+      document.body.style.backgroundSize = 'cover, cover';
+      document.body.style.backgroundPosition = 'center, center';
+      document.body.style.backgroundRepeat = 'no-repeat, no-repeat';
+      document.body.style.backgroundAttachment = 'fixed, fixed';
+    }
   }
 }
 async function caricaCatalogo() {
