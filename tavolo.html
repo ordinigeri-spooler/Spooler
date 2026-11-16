@@ -106,25 +106,25 @@
 
   /* categorie — a sinistra (body.cat-left): rail verticale grande e moderno */
   body.cat-left #sotto-ordina { display: flex; gap: 14px; align-items: flex-start; }
+  /* RUOTA categorie: l'attiva grande al centro, le altre via via più piccole sopra/sotto */
   body.cat-left nav.cat {
     position: sticky; top: calc(72px + env(safe-area-inset-top)); z-index: 10;
-    flex: 0 0 96px; margin: 0; padding: 0; align-self: flex-start; overflow: visible;
+    flex: 0 0 100px; margin: 0; padding: 0; align-self: flex-start; overflow: hidden;
     height: calc(100dvh - 150px); background: transparent;
   }
   body.cat-left nav.cat .scroll {
-    display: flex; flex-direction: column; gap: 10px; padding: 3px; height: 100%;
-    overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+    display: flex; flex-direction: column; gap: 9px; padding: 3px;
     background: transparent; border: 0; border-radius: 0; box-shadow: none;
+    transition: transform .4s cubic-bezier(.2,.85,.25,1); will-change: transform;
   }
-  body.cat-left nav.cat .scroll::-webkit-scrollbar { display: none; }
-  /* card categoria: stessa forma delle card prodotto + ombra esterna celeste */
   body.cat-left nav.cat button {
-    flex: 1 1 auto; min-height: 58px; display: flex; align-items: center; justify-content: center;
-    white-space: normal; text-align: center; font-size: 15px; font-weight: 700; line-height: 1.15;
-    padding: 10px 8px; border: 1px solid rgba(255,255,255,.65); border-radius: 22px;
+    flex: 0 0 auto; min-height: 50px; display: flex; align-items: center; justify-content: center;
+    white-space: normal; text-align: center; font-size: 13px; font-weight: 700; line-height: 1.12;
+    padding: 8px; border: 1px solid rgba(255,255,255,.65); border-radius: 20px;
     background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
-    box-shadow: 0 7px 18px rgba(93,151,201,.45), inset 0 1px 0 rgba(255,255,255,.9);
+    box-shadow: 0 6px 15px rgba(93,151,201,.4), inset 0 1px 0 rgba(255,255,255,.9);
     position: relative; overflow: hidden;
+    transition: font-size .4s cubic-bezier(.2,.85,.25,1), min-height .4s cubic-bezier(.2,.85,.25,1), opacity .4s ease, background .3s ease, box-shadow .3s ease, color .3s ease;
   }
   /* riflesso diagonale "glass" */
   body.cat-left nav.cat button::after {
@@ -134,7 +134,7 @@
   }
   body.cat-left nav.cat button.on {
     background: linear-gradient(150deg, #9cc6e8 0%, #5b97c9 100%); color: #fff; border-color: rgba(255,255,255,.4);
-    box-shadow: 0 12px 26px rgba(74,130,180,.6), inset 0 1px 0 rgba(255,255,255,.45);
+    box-shadow: 0 14px 30px rgba(74,130,180,.62), inset 0 1px 0 rgba(255,255,255,.45);
   }
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
@@ -617,6 +617,7 @@ function disegnaMenu() {
   });
   collegaSchede();
   osservaCategorie();
+  aggiornaRuota();
   aggiornaBarra();
 }
 
@@ -679,22 +680,47 @@ function osservaCategorie() {
     const id = vis.target.id.slice(4);
     document.querySelectorAll('[data-vai]').forEach(b => {
       const on = b.dataset.vai === id; b.classList.toggle('on', on);
-      if (on) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+      if (on && !document.body.classList.contains('cat-left')) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     });
+    aggiornaRuota();
     posizionaFaro();
   }, { rootMargin: '-140px 0px -60% 0px' });
   document.querySelectorAll('section.categoria').forEach(s => osservatore.observe(s));
   posizionaFaro();
 }
 
-// fa partire il faro dalla categoria attiva (a sinistra); la segue mentre scrolli
+// RUOTA categorie: l'attiva grande al centro, le altre via via più piccole sopra e sotto
+function aggiornaRuota() {
+  const nav = document.querySelector('body.cat-left nav.cat');
+  if (!nav) return;
+  const strip = nav.querySelector('.scroll'); if (!strip) return;
+  const btns = [...strip.querySelectorAll('button')];
+  if (!btns.length) return;
+  let att = btns.findIndex(b => b.classList.contains('on'));
+  if (att < 0) att = 0;
+  const TAGLIE = [[19, 76], [14, 54], [12.5, 46], [11.5, 40]]; // [font, min-height] per distanza
+  btns.forEach((b, i) => {
+    const d = Math.abs(i - att);
+    const [fs, mh] = TAGLIE[Math.min(d, TAGLIE.length - 1)];
+    b.style.fontSize = fs + 'px';
+    b.style.minHeight = mh + 'px';
+    b.style.opacity = String(Math.max(0.3, 1 - d * 0.24));
+    b.style.zIndex = String(50 - d);
+  });
+  // porta l'attiva al centro della colonna (come una ruota)
+  const centro = nav.clientHeight / 2;
+  const posAtt = btns[att].offsetTop + btns[att].offsetHeight / 2;
+  strip.style.transform = 'translateY(' + (centro - posAtt) + 'px)';
+}
+
+// fa partire il faro dal centro della colonna (dove c'è la categoria attiva) verso i prodotti
 function posizionaFaro() {
   const faro = $('faro-prodotti'); if (!faro) return;
-  const on = document.querySelector('body.cat-left nav.cat button.on');
-  if (on) {
-    const r = on.getBoundingClientRect();
+  const nav = document.querySelector('body.cat-left nav.cat');
+  if (nav) {
+    const r = nav.getBoundingClientRect();
     faro.classList.add('da-categoria');
-    faro.style.left = (r.right - 26) + 'px';
+    faro.style.left = (r.right - 22) + 'px';
     faro.style.top = (r.top + r.height / 2) + 'px';
   } else {
     faro.classList.remove('da-categoria');
@@ -703,7 +729,7 @@ function posizionaFaro() {
 }
 let rafFaro = 0;
 window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(posizionaFaro); }, { passive: true });
-window.addEventListener('resize', posizionaFaro);
+window.addEventListener('resize', () => { aggiornaRuota(); posizionaFaro(); });
 
 // ---------- filtro allergeni ----------
 function aggiornaBarraFiltri() {
