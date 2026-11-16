@@ -141,17 +141,6 @@
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
   body.cat-left #lista-prodotti { flex: 1; min-width: 0; position: relative; }
-  /* raggi di luce ripetuti (uno ogni ~5 prodotti) che restano DIETRO ai prodotti */
-  .raggi-layer { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-  .raggio {
-    position: absolute; left: -24px; width: calc(100% + 60px); height: 300px;
-    transform: translateY(-50%); mix-blend-mode: screen; pointer-events: none;
-    background:
-      repeating-conic-gradient(from -24deg at left center,
-        rgba(255,255,255,.12) 0deg 2.2deg, rgba(255,255,255,0) 2.2deg 8deg),
-      radial-gradient(ellipse 85% 60% at left center,
-        rgba(255,253,246,.85) 0%, rgba(255,251,236,.42) 28%, rgba(255,249,230,.14) 52%, rgba(255,249,230,0) 72%);
-  }
   /* colonna categorie -> prodotti a 2 colonne */
   body.cat-left .griglia { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px 8px; }
   body.cat-left .prodotto { transform-origin: center center; will-change: transform, opacity; }
@@ -308,17 +297,17 @@
       rgba(255,249,230,.13) 58%,
       rgba(255,249,230,0) 74%);
   }
-  /* raggi che partono dalla categoria attiva (sinistra) e illuminano dietro i prodotti */
+  /* luce soffusa che parte sfumata dalla categoria attiva (sinistra) e va verso i prodotti, dietro alle schede */
   #faro-prodotti.da-categoria {
-    width: 430px; height: 360px; max-width: none; transform: translateY(-50%);
+    width: 520px; height: 440px; max-width: none; transform: translateY(-50%);
+    filter: blur(10px);
     background:
-      repeating-conic-gradient(from -26deg at left center,
-        rgba(255,255,255,.10) 0deg 2.2deg, rgba(255,255,255,0) 2.2deg 8deg),
-      radial-gradient(ellipse 100% 60% at left center,
-        rgba(255,253,246,.92) 0%,
-        rgba(255,251,236,.46) 26%,
-        rgba(255,249,230,.16) 50%,
-        rgba(255,249,230,0) 70%);
+      radial-gradient(ellipse 100% 52% at left center,
+        rgba(255,252,240,.82) 0%,
+        rgba(255,250,232,.44) 22%,
+        rgba(255,249,230,.18) 44%,
+        rgba(255,249,230,.06) 62%,
+        rgba(255,249,230,0) 76%);
   }
 </style>
 </head>
@@ -354,7 +343,7 @@
 
   <!-- 2. Ordinazione -->
   <div id="v-menu" class="hidden">
-    <div id="faro-prodotti" aria-hidden="true" class="hidden"></div>
+    <div id="faro-prodotti" aria-hidden="true"></div>
     <div class="stato" id="stato-comanda"></div>
     <div id="sotto-ordina">
       <nav class="cat"><div class="scroll" id="tabs-cat"></div></nav>
@@ -674,7 +663,7 @@ function disegnaMenu() {
   osservaCategorie();
   aggiornaRuota();
   fisheyeProdotti();
-  disponiRaggi();
+  posizionaFaro();
   aggiornaBarra();
 }
 
@@ -740,8 +729,10 @@ function osservaCategorie() {
       if (on && !document.body.classList.contains('cat-left')) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     });
     aggiornaRuota();
+    posizionaFaro();
   }, { rootMargin: '-140px 0px -60% 0px' });
   document.querySelectorAll('section.categoria').forEach(s => osservatore.observe(s));
+  posizionaFaro();
 }
 
 // RUOTA categorie infinita: l'attiva grande al centro, le altre a scalare sopra/sotto;
@@ -800,26 +791,24 @@ function fisheyeProdotti() {
   });
 }
 
-// posizione verticale di un elemento rispetto a un antenato, ignorando i transform (usa il layout)
-function offsetYIn(el, anc) { let y = 0; while (el && el !== anc) { y += el.offsetTop; el = el.offsetParent; } return y; }
-// RAGGI ripetuti: un raggio di luce ogni ~5 prodotti, sempre DIETRO alle schede
-const RAGGIO_OGNI = 5;        // un raggio ogni 5 prodotti (4-6)
-function disponiRaggi() {
-  if (!document.body.classList.contains('cat-left')) return;
-  const lista = $('lista-prodotti'); if (!lista) return;
-  let layer = lista.querySelector('.raggi-layer');
-  if (!layer) { layer = document.createElement('div'); layer.className = 'raggi-layer'; lista.insertBefore(layer, lista.firstChild); }
-  const cards = lista.querySelectorAll('.prodotto');
-  const punti = [];
-  cards.forEach((c, i) => {
-    if (i % RAGGIO_OGNI !== 2) return;              // centra sul 3° del gruppo
-    punti.push(Math.round(offsetYIn(c, lista) + c.offsetHeight / 2));
-  });
-  layer.innerHTML = punti.map(y => `<div class="raggio" style="top:${y}px"></div>`).join('');
+// luce soffusa che parte sfumata dalla categoria ATTIVA (sinistra) e va verso i prodotti, dietro alle schede
+function posizionaFaro() {
+  const faro = $('faro-prodotti'); if (!faro) return;
+  const att = document.querySelector('body.cat-left nav.cat button.on')
+           || document.querySelector('body.cat-left nav.cat');
+  if (att) {
+    const r = att.getBoundingClientRect();
+    faro.classList.add('da-categoria');
+    faro.style.left = (r.left + r.width * 0.5) + 'px';   // sorgente sulla categoria attiva
+    faro.style.top = (r.top + r.height / 2) + 'px';
+  } else {
+    faro.classList.remove('da-categoria');
+    faro.style.left = ''; faro.style.top = '';
+  }
 }
 let rafFaro = 0;
-window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(fisheyeProdotti); }, { passive: true });
-window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); aggiornaStrumenti(); disponiRaggi(); });
+window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(() => { posizionaFaro(); fisheyeProdotti(); }); }, { passive: true });
+window.addEventListener('resize', () => { aggiornaRuota(); posizionaFaro(); fisheyeProdotti(); aggiornaStrumenti(); });
 
 // ---------- filtro allergeni ----------
 function aggiornaBarraFiltri() {
