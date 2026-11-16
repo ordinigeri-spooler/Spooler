@@ -292,19 +292,19 @@
   body.cat-left #faro-prodotti {
     display: block; position: fixed; inset: 0; width: 100%; height: 100%;
     max-width: none; transform: none; pointer-events: none; z-index: 1;
-    mix-blend-mode: screen; filter: blur(3px);
+    filter: blur(2px);   /* niente blend-mode: così la luce si vede su QUALSIASI sfondo (chiaro o foto) */
     background:
       /* alone sul punto a fuoco (il prodotto al centro) */
-      radial-gradient(ellipse 24% 13% at 60% 50%,
-        rgba(255,253,244,.80) 0%, rgba(255,251,236,.30) 46%, rgba(255,251,236,0) 72%),
-      /* raggio da destra (punta a sinistra, verso il centro) + raggio da sinistra (punta a destra) */
+      radial-gradient(ellipse 28% 16% at 60% 50%,
+        rgba(255,251,235,.62) 0%, rgba(255,250,232,.26) 48%, rgba(255,250,232,0) 72%),
+      /* raggio da destra (90°) + raggio da sinistra (270°) che convergono sul centro */
       conic-gradient(from 0deg at 60% 50%,
-        rgba(255,251,236,0) 74deg,
-        rgba(255,251,236,.55) 90deg,
-        rgba(255,251,236,0) 106deg,
-        rgba(255,251,236,0) 254deg,
-        rgba(255,251,236,.55) 270deg,
-        rgba(255,251,236,0) 286deg);
+        rgba(255,249,230,0) 68deg,
+        rgba(255,249,230,.50) 90deg,
+        rgba(255,249,230,0) 112deg,
+        rgba(255,249,230,0) 248deg,
+        rgba(255,249,230,.50) 270deg,
+        rgba(255,249,230,0) 292deg);
   }
 </style>
 </head>
