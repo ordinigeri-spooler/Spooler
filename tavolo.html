@@ -106,26 +106,28 @@
 
   /* categorie — a sinistra (body.cat-left): rail verticale grande e moderno */
   body.cat-left #sotto-ordina { display: flex; gap: 14px; align-items: flex-start; }
-  /* RUOTA categorie: l'attiva grande al centro, le altre via via più piccole sopra/sotto */
+  /* RUOTA categorie infinita: l'attiva grande al centro, le altre a scalare sopra/sotto,
+     e l'anello gira avanti e indietro (dopo l'ultima torna la prima e viceversa) */
   body.cat-left nav.cat {
     position: sticky; top: calc(72px + env(safe-area-inset-top)); z-index: 10;
     flex: 0 0 100px; margin: 0; padding: 0; align-self: flex-start; overflow: hidden;
     height: calc(100dvh - 150px); background: transparent;
   }
   body.cat-left nav.cat .scroll {
-    display: flex; flex-direction: column; gap: 9px; padding: 3px;
+    position: relative; display: block; height: 100%; padding: 0;
     background: transparent; border: 0; border-radius: 0; box-shadow: none;
-    transition: transform .4s cubic-bezier(.2,.85,.25,1); will-change: transform;
   }
   body.cat-left nav.cat button {
-    flex: 0 0 auto; min-height: 50px; display: flex; align-items: center; justify-content: center;
+    position: absolute; left: 3px; right: 3px; top: 50%; transform: translateY(-50%);
+    min-height: 50px; display: flex; align-items: center; justify-content: center;
     white-space: normal; text-align: center; font-size: 13px; font-weight: 700; line-height: 1.12;
     padding: 8px; border: 1px solid rgba(255,255,255,.65); border-radius: 20px;
     background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
     box-shadow: 0 6px 15px rgba(93,151,201,.4), inset 0 1px 0 rgba(255,255,255,.9);
-    position: relative; overflow: hidden;
-    transition: font-size .4s cubic-bezier(.2,.85,.25,1), min-height .4s cubic-bezier(.2,.85,.25,1), opacity .4s ease, background .3s ease, box-shadow .3s ease, color .3s ease;
+    overflow: hidden;
+    transition: top .42s cubic-bezier(.2,.85,.25,1), font-size .42s cubic-bezier(.2,.85,.25,1), min-height .42s cubic-bezier(.2,.85,.25,1), opacity .35s ease, background .3s ease, box-shadow .3s ease, color .3s ease;
   }
+  body.cat-left nav.cat .cat-gruppo { display: none; }   /* ruota: niente fasce-gruppo inline nel rail */
   /* riflesso diagonale "glass" */
   body.cat-left nav.cat button::after {
     content: ''; position: absolute; top: -40%; left: -30%; width: 90%; height: 60%;
@@ -138,10 +140,6 @@
   }
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
-  body.cat-left nav.cat .cat-gruppo {
-    display: block; flex: 0 0 auto; background: #e0a330; color: #fff; font-weight: 800; text-transform: uppercase;
-    font-size: 11.5px; letter-spacing: .5px; padding: 7px 10px; border-radius: 12px; text-align: center;
-  }
   body.cat-left #lista-prodotti { flex: 1; min-width: 0; }
   /* colonna categorie stretta -> prodotti a 2-3 colonne */
   body.cat-left .griglia { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px 8px; }
@@ -689,28 +687,32 @@ function osservaCategorie() {
   posizionaFaro();
 }
 
-// RUOTA categorie: l'attiva grande al centro, le altre via via più piccole sopra e sotto
+// RUOTA categorie infinita: l'attiva grande al centro, le altre a scalare sopra/sotto;
+// l'anello è ciclico (sopra la prima riappare l'ultima e viceversa).
 function aggiornaRuota() {
   const nav = document.querySelector('body.cat-left nav.cat');
   if (!nav) return;
   const strip = nav.querySelector('.scroll'); if (!strip) return;
   const btns = [...strip.querySelectorAll('button')];
-  if (!btns.length) return;
+  const N = btns.length; if (!N) return;
   let att = btns.findIndex(b => b.classList.contains('on'));
   if (att < 0) att = 0;
-  const TAGLIE = [[19, 76], [14, 54], [12.5, 46], [11.5, 40]]; // [font, min-height] per distanza
+  const TAGLIE = [[18, 60], [14, 48], [12.5, 42], [11.5, 36]]; // [font, min-height] per distanza
+  const PASSO = 60;          // distanza verticale tra una categoria e l'altra
+  const VISIBILI = 3;        // quante categorie mostrare sopra e sotto l'attiva
+  const centro = nav.clientHeight / 2;
   btns.forEach((b, i) => {
-    const d = Math.abs(i - att);
-    const [fs, mh] = TAGLIE[Math.min(d, TAGLIE.length - 1)];
+    let d = ((i - att) % N + N) % N;   // 0..N-1
+    if (d > N / 2) d -= N;             // distanza ciclica con segno: -N/2..N/2
+    const ad = Math.abs(d);
+    const [fs, mh] = TAGLIE[Math.min(ad, TAGLIE.length - 1)];
     b.style.fontSize = fs + 'px';
     b.style.minHeight = mh + 'px';
-    b.style.opacity = String(Math.max(0.3, 1 - d * 0.24));
-    b.style.zIndex = String(50 - d);
+    b.style.top = (centro + d * PASSO) + 'px';
+    b.style.zIndex = String(50 - ad);
+    if (ad > VISIBILI) { b.style.opacity = '0'; b.style.pointerEvents = 'none'; }
+    else { b.style.opacity = String(Math.max(0.3, 1 - ad * 0.24)); b.style.pointerEvents = ''; }
   });
-  // porta l'attiva al centro della colonna (come una ruota)
-  const centro = nav.clientHeight / 2;
-  const posAtt = btns[att].offsetTop + btns[att].offsetHeight / 2;
-  strip.style.transform = 'translateY(' + (centro - posAtt) + 'px)';
 }
 
 // fa partire il faro dal centro della colonna (dove c'è la categoria attiva) verso i prodotti
