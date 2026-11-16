@@ -6,6 +6,7 @@
 <title>Pannello Admin - Gestione Menu</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root {
     --bg: #1b1f1a;
@@ -411,8 +412,12 @@
     <section class="section" id="section-prodotti">
       <div class="section-header">
         <h2>Prodotti</h2>
-        <button id="btn-nuovo-prodotto">+ Nuovo prodotto</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="secondary" id="btn-carica-zip-menu">📦 Carica dati menu (ZIP)</button>
+          <button id="btn-nuovo-prodotto">+ Nuovo prodotto</button>
+        </div>
       </div>
+      <input type="file" id="file-zip-menu" accept=".zip,application/zip" style="display:none;">
       <div style="margin-bottom:16px; display:flex; gap:10px; flex-wrap:wrap;">
         <select id="filtro-categoria-prodotti" style="max-width:280px;">
           <option value="">Tutte le categorie</option>
@@ -937,6 +942,17 @@
         <button type="submit">Salva</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ============ MODAL CARICA DATI MENU DA ZIP ============ -->
+<div class="modal-backdrop" id="modal-zip-menu">
+  <div class="modal">
+    <h3>Carico i dati del menu</h3>
+    <div id="zip-menu-stato" style="font-size:14px; line-height:1.6; max-height:50vh; overflow-y:auto;">Leggo lo ZIP…</div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="btn-chiudi-zip-menu" onclick="closeModal('modal-zip-menu')" disabled>Chiudi</button>
+    </div>
   </div>
 </div>
 
@@ -2820,6 +2836,172 @@ const ICONE_CATEGORIA_BASE64 = {
       btn.textContent = 'Salva';
     }
   });
+
+  // ================= CARICA DATI MENU DA ZIP (descrizione, allergeni, foto) =================
+  // Abbina i prodotti per NUMERO: la cartella "165 - Nome" -> prodotti.codice_geri = 165.
+  // Usa solo "Menu Cena" (ha tutti i prodotti). Le cartelle senza numero (bevande, liquori) si saltano.
+  const MAPPA_ALLERGENI_ZIP = { 'latticini': 'Latte' }; // nome usato sul menu -> nome standard
+
+  function estraiCodiceCartella(nome) {
+    const m = /^\s*(\d+)\s*-\s*/.exec(nome || '');
+    return m ? parseInt(m[1], 10) : null;
+  }
+  function valoreDopoEtichetta(testo, etichetta) {
+    const re = new RegExp('^\\s*' + etichetta + '\\s*:\\s*(.*)$', 'im');
+    const m = re.exec(testo || '');
+    return m ? m[1].trim() : '';
+  }
+  function allergeniDaTxt(testo) {
+    return (testo || '').split(/\r?\n/)
+      .map(r => r.trim())
+      .filter(r => /^-\s+/.test(r))
+      .map(r => r.replace(/^-\s+/, '').trim())
+      .filter(Boolean);
+  }
+
+  const inputZipMenu = document.getElementById('file-zip-menu');
+  document.getElementById('btn-carica-zip-menu').addEventListener('click', () => {
+    if (!currentTenantId) { alert('Seleziona prima un locale.'); return; }
+    inputZipMenu.click();
+  });
+  inputZipMenu.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (typeof JSZip === 'undefined') { alert('Libreria ZIP non caricata. Ricarica la pagina e riprova.'); return; }
+    if (!confirm('Carico i dati del menu dallo ZIP.\n\nPer i prodotti che hanno lo STESSO NUMERO (es. 165) aggiorno descrizione, allergeni e foto. Il resto del prodotto resta com\'è.\n\nContinuare?')) return;
+    await importaZipMenu(file);
+  });
+
+  async function importaZipMenu(file) {
+    const stato = document.getElementById('zip-menu-stato');
+    const btnChiudi = document.getElementById('btn-chiudi-zip-menu');
+    btnChiudi.disabled = true;
+    stato.innerHTML = 'Leggo lo ZIP…';
+    openModal('modal-zip-menu');
+    try {
+      const zip = await JSZip.loadAsync(file);
+
+      // 1) raccolgo i dati per numero, solo da "Menu Cena"
+      const perCodice = new Map(); // codice -> { descrizione, allergeni:Set, fotoPath, _descPath, _allPath }
+      zip.forEach((path, entry) => {
+        if (entry.dir) return;
+        const parti = path.split('/');
+        const iCena = parti.findIndex(p => p === 'Menu Cena');
+        if (iCena < 0) return;
+        const cartProd = parti[iCena + 2];
+        const nomeFile = parti[iCena + 3];
+        if (!cartProd || !nomeFile) return;
+        const codice = estraiCodiceCartella(cartProd);
+        if (codice == null) return;
+        if (!perCodice.has(codice)) perCodice.set(codice, { descrizione: '', allergeni: new Set(), fotoPath: null });
+        const rec = perCodice.get(codice);
+        const low = nomeFile.toLowerCase();
+        if (low === 'foto.jpg' || low === 'foto.jpeg' || low === 'foto.png') rec.fotoPath = path;
+        else if (low === 'descrizione.txt') rec._descPath = path;
+        else if (low === 'allergeni.txt') rec._allPath = path;
+      });
+      if (!perCodice.size) throw new Error('Nessuna cartella prodotto trovata dentro "Menu Cena". Controlla che lo ZIP sia quello giusto.');
+
+      // leggo i txt dentro ogni cartella
+      for (const [, rec] of perCodice) {
+        if (rec._descPath) rec.descrizione = valoreDopoEtichetta(await zip.file(rec._descPath).async('string'), 'Descrizione');
+        if (rec._allPath) allergeniDaTxt(await zip.file(rec._allPath).async('string')).forEach(a => rec.allergeni.add(a));
+      }
+
+      // 2) prodotti del locale, per codice_geri (= il numero)
+      stato.innerHTML = 'Confronto con i prodotti del sito…';
+      const { data: prodotti, error: errProd } = await sbClient.from('prodotti')
+        .select('id, nome, codice_geri').eq('tenant_id', currentTenantId);
+      if (errProd) throw errProd;
+      const prodPerCodice = new Map();
+      (prodotti || []).forEach(p => {
+        if (p.codice_geri == null) return;
+        if (!prodPerCodice.has(p.codice_geri)) prodPerCodice.set(p.codice_geri, []);
+        prodPerCodice.get(p.codice_geri).push(p);
+      });
+
+      // 3) creo gli allergeni mancanti (mappando i nomi del menu su quelli standard)
+      const { data: allEsistenti } = await sbClient.from('allergeni').select('*').eq('tenant_id', currentTenantId);
+      const allPerNome = new Map();
+      (allEsistenti || []).forEach(a => allPerNome.set(a.nome.trim().toLowerCase(), a));
+      const iconaStandard = new Map(ALLERGENI_STANDARD_UE.map(([ic, nm]) => [nm.toLowerCase(), ic]));
+      const nomeStd = a => MAPPA_ALLERGENI_ZIP[a.toLowerCase()] || a;
+
+      const nomiRichiesti = new Set();
+      for (const rec of perCodice.values()) for (const a of rec.allergeni) nomiRichiesti.add(nomeStd(a));
+      const daCreare = [];
+      let ordine = (allEsistenti || []).length;
+      for (const nome of nomiRichiesti) {
+        if (!allPerNome.has(nome.toLowerCase()))
+          daCreare.push({ tenant_id: currentTenantId, nome, icona: iconaStandard.get(nome.toLowerCase()) || '⚠️', ordine_visualizzazione: ordine++ });
+      }
+      if (daCreare.length) {
+        const { data: creati, error: errCrea } = await sbClient.from('allergeni').insert(daCreare).select('*');
+        if (errCrea) throw errCrea;
+        (creati || []).forEach(a => allPerNome.set(a.nome.trim().toLowerCase(), a));
+      }
+
+      // 4) applico, prodotto per prodotto
+      const codici = [...perCodice.keys()].sort((a, b) => a - b);
+      let aggiornati = 0, foto = 0; const nonTrovati = [];
+      let i = 0;
+      for (const codice of codici) {
+        i++;
+        const rec = perCodice.get(codice);
+        const matches = prodPerCodice.get(codice);
+        stato.innerHTML = `Elaboro ${i}/${codici.length} — numero ${codice}…<br>Prodotti aggiornati: ${aggiornati} · Foto: ${foto}`;
+        if (!matches || !matches.length) { nonTrovati.push(codice); continue; }
+
+        // foto: percorso stabile per numero, così un nuovo import sovrascrive invece di accumulare
+        let immagineUrl = null;
+        if (rec.fotoPath) {
+          const blob = await zip.file(rec.fotoPath).async('blob');
+          const estensione = rec.fotoPath.split('.').pop().toLowerCase();
+          const ctype = estensione === 'png' ? 'image/png' : 'image/jpeg';
+          const path = `${currentTenantId}/menu/${codice}.${estensione}`;
+          const { error: errUp } = await sbClient.storage.from(BUCKET).upload(path, blob, { upsert: true, contentType: ctype });
+          if (!errUp) {
+            const { data: pub } = sbClient.storage.from(BUCKET).getPublicUrl(path);
+            immagineUrl = pub.publicUrl + '?v=' + Date.now();
+            foto++;
+          }
+        }
+
+        const idAllergeni = [...rec.allergeni]
+          .map(a => allPerNome.get(nomeStd(a).toLowerCase()))
+          .filter(Boolean).map(a => a.id);
+
+        for (const p of matches) {
+          const payload = {};
+          if (rec.descrizione) payload.descrizione = rec.descrizione;
+          if (immagineUrl) payload.immagine_url = immagineUrl;
+          if (Object.keys(payload).length) {
+            const { error: errU } = await sbClient.from('prodotti').update(payload).eq('id', p.id);
+            if (errU) throw errU;
+          }
+          // allergeni: sostituisco quelli del prodotto con quelli del menu
+          await sbClient.from('prodotti_allergeni').delete().eq('prodotto_id', p.id);
+          if (idAllergeni.length) {
+            await sbClient.from('prodotti_allergeni').insert(idAllergeni.map(aid => ({ prodotto_id: p.id, allergene_id: aid })));
+          }
+          aggiornati++;
+        }
+      }
+
+      // 5) riepilogo
+      let msg = `<b>Fatto.</b><br>Prodotti aggiornati: ${aggiornati}<br>Foto caricate: ${foto}`;
+      if (daCreare.length) msg += `<br>Allergeni creati: ${daCreare.length} (${daCreare.map(a => a.nome).join(', ')})`;
+      if (nonTrovati.length) msg += `<br><br>Numeri nello ZIP senza prodotto corrispondente sul sito (${nonTrovati.length}): ${nonTrovati.join(', ')}<br><span style="color:var(--ink-dim)">Di solito bevande/liquori senza codice su Geri, o prodotti non ancora importati dal catalogo.</span>`;
+      stato.innerHTML = msg;
+      await caricaProdotti();
+      if (typeof caricaAllergeni === 'function') await caricaAllergeni();
+    } catch (err) {
+      stato.innerHTML = '<span style="color:#c0392b">Errore: ' + escapeHtml(err.message || String(err)) + '</span>';
+    } finally {
+      document.getElementById('btn-chiudi-zip-menu').disabled = false;
+    }
+  }
 
   // ================= VARIAZIONI (gruppi a livello locale) =================
   async function caricaVariazioniGruppi() {
