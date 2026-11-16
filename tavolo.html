@@ -259,15 +259,15 @@
 
   /* faro soffuso fisso al centro: illumina da dietro i prodotti che stai guardando mentre scrolli */
   #faro-prodotti {
-    position: fixed; left: 50%; top: 52%; transform: translate(-50%, -50%);
-    width: 142vw; height: 84vh; max-width: 840px; pointer-events: none; z-index: -1;
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 150vw; height: 92vh; max-width: 900px; pointer-events: none; z-index: 8;
+    mix-blend-mode: screen;
     background: radial-gradient(ellipse at center,
-      rgba(255,250,235,.82) 0%,
-      rgba(255,250,235,.52) 15%,
-      rgba(255,250,235,.26) 32%,
-      rgba(255,250,235,.09) 50%,
-      rgba(255,250,235,0) 68%);
-    filter: blur(4px);
+      rgba(255,253,246,.72) 0%,
+      rgba(255,252,240,.60) 24%,
+      rgba(255,250,234,.34) 44%,
+      rgba(255,249,230,.13) 58%,
+      rgba(255,249,230,0) 74%);
   }
 </style>
 </head>
