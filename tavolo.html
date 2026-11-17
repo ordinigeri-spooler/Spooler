@@ -298,7 +298,6 @@
       rgba(255,255,255,.25) 80%,
       rgba(255,255,255,0) 100%);
     filter: blur(18px);
-    transition: top 0.3s ease;
   }
 </style>
 </head>
@@ -780,17 +779,17 @@ function fisheyeProdotti() {
   });
 }
 
-// FARO: striscia orizzontale allineata alla categoria attiva
+// FARO: striscia orizzontale sempre al centro della nav (dove sta visivamente la categoria attiva).
+// In cat-left la categoria attiva e' sempre centrata, quindi puntiamo al centro della nav: cosi'
+// non salta tra un bottone e l'altro e non dipende dalla transition del bottone.
 function posizionaFaro() {
   const faro = document.getElementById('faro-prodotti');
   if (!faro) return;
   const nav = document.querySelector('body.cat-left nav.cat');
-  if (!nav) { faro.style.display = 'none'; return; }
-  const btnOn = nav.querySelector('button.on');
-  if (!btnOn) return;
-  const r = btnOn.getBoundingClientRect();
+  if (!nav) { faro.style.top = '-9999px'; return; }
+  const r = nav.getBoundingClientRect();
   const centroY = r.top + r.height / 2;
-  faro.style.top = (centroY - 45) + 'px';   // 90px altezza, centra sulla categoria
+  faro.style.top = (centroY - 45) + 'px';   // 90px altezza, centra sulla nav
 }
 let rafFaro = 0;
 window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(fisheyeProdotti); }, { passive: true });
