@@ -1925,6 +1925,7 @@ const ICONE_CATEGORIA_BASE64 = {
         </div>
         <div class="item-actions">
           <button class="secondary" onclick="modificaProdotto('${p.id}')">Modifica</button>
+          <button class="${p.attivo ? 'danger' : 'secondary'}" onclick="event.stopPropagation(); toggleAttivoProdotto('${p.id}', ${p.attivo ? 'false' : 'true'})" style="font-size:12px; padding:6px 10px;">${p.attivo ? '🚫 Disattiva' : '✅ Attiva'}</button>
           <button class="danger" onclick="eliminaProdotto('${p.id}')">Elimina</button>
         </div>
       </div>
@@ -1962,6 +1963,14 @@ const ICONE_CATEGORIA_BASE64 = {
     input.value = nuovoPrezzo.toFixed(2);
     input.style.borderColor = 'var(--ok)';
     setTimeout(() => { input.style.borderColor = ''; }, 1200);
+  }
+
+  async function toggleAttivoProdotto(id, nuovoStato) {
+    const { error } = await sbClient.from('prodotti').update({ attivo: nuovoStato }).eq('id', id);
+    if (error) { alert('Errore: ' + error.message); return; }
+    const p = prodottiCache.find(x => x.id === id);
+    if (p) p.attivo = nuovoStato;
+    renderProdotti();
   }
 
   document.getElementById('ricerca-prodotti').addEventListener('input', renderProdotti);
