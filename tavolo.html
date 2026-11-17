@@ -6,7 +6,7 @@
 <title>Ordina al tavolo</title>
 <meta name="theme-color" content="#33421f">
 <link rel="apple-touch-icon" href="/icon-192.png">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -397,8 +397,8 @@
 
 <script>
 // ================= CONFIGURAZIONE =================
-const SUPABASE_URL = 'https://tsgxnsvwglhebgelwaxn.supabase.co'; // <-- URL del NUOVO progetto Supabase
-const SUPABASE_ANON_KEY = 'sb_publishable_RP3UQhYxOMGRHwHFssJstw_2nILJvrG';           // <-- Publishable/anon key del nuovo progetto
+const SUPABASE_URL = 'PLACEHOLDER_SUPABASE_URL'; // <-- URL del NUOVO progetto Supabase
+const SUPABASE_ANON_KEY = 'PLACEHOLDER_SUPABASE_KEY';           // <-- Publishable/anon key del nuovo progetto
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
 const qs = new URLSearchParams(location.search);
@@ -588,15 +588,15 @@ function disegnaApertura() {
   const menu = info.menu || [];
   $('lista-menu').innerHTML = menu.length ? menu.map(m => `
     <button class="menu-scelta ${menuScelto === m.id ? 'sel' : ''}" data-menu="${m.id}">
-      <div class="t"><b>${esc(m.nome)}</b><span class="p">${m.tipo !== 'carta' ? euro(m.prezzo_adulto) + ' <small>a persona</small>' : Number(m.prezzo_adulto) ? 'Coperto ' + euro(m.prezzo_adulto) : 'Alla carta'}</span></div>
+      <div class="t"><b>${esc(m.nome)}</b><span class="p">${m.coperto_compreso ? 'Coperto compreso' : m.tipo !== 'carta' ? euro(m.prezzo_adulto) + ' <small>a persona</small>' : Number(m.prezzo_adulto) ? 'Coperto ' + euro(m.prezzo_adulto) : 'Alla carta'}</span></div>
       ${m.tipo === 'fisso' && (m.limite_piatti_persona || m.bevande_incluse_persona) ? `<div class="d">${[m.limite_piatti_persona ? m.limite_piatti_persona + ' piatti a scelta' : '', m.bevande_incluse_persona ? m.bevande_incluse_persona + (m.bevande_incluse_persona === 1 ? ' bevanda inclusa' : ' bevande incluse') : ''].filter(Boolean).join(' + ')} a persona</div>` : ''}
-      ${Number(m.prezzo_bambino) && Number(m.prezzo_bambino) !== Number(m.prezzo_adulto) ? `<div class="d">Bambini ${euro(m.prezzo_bambino)}</div>` : ''}
+      ${!m.coperto_compreso && Number(m.prezzo_bambino) && Number(m.prezzo_bambino) !== Number(m.prezzo_adulto) ? `<div class="d">Bambini ${euro(m.prezzo_bambino)}</div>` : ''}
       ${m.descrizione ? `<div class="d">${esc(m.descrizione)}</div>` : ''}
     </button>`).join('') : '<p class="muted">Nessun menu disponibile in questo momento. Chiedi al personale.</p>';
   document.querySelectorAll('[data-menu]').forEach(b => b.onclick = () => { menuScelto = b.dataset.menu; disegnaApertura(); });
   const m = menu.find(x => x.id === menuScelto);
   const tot = m ? persone.adulti * m.prezzo_adulto + persone.bambini * m.prezzo_bambino : 0;
-  $('totale-apertura').innerHTML = m && tot > 0 ? `${m.tipo !== 'carta' ? 'Totale menu' : 'Totale coperti'}: <b>${euro(tot)}</b>` : '';
+  $('totale-apertura').innerHTML = m && tot > 0 && !m.coperto_compreso ? `${m.tipo !== 'carta' ? 'Totale menu' : 'Totale coperti'}: <b>${euro(tot)}</b>` : '';
   $('btn-inizia').disabled = !m || persone.adulti + persone.bambini < 1;
 }
 document.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { persone[b.dataset.p] = Math.max(0, persone[b.dataset.p] + Number(b.dataset.d)); disegnaApertura(); });
@@ -604,7 +604,7 @@ $('btn-inizia').onclick = async () => {
   const m = info.menu.find(x => x.id === menuScelto);
   const pers = persone.adulti + persone.bambini;
   const totMenu = persone.adulti * m.prezzo_adulto + persone.bambini * m.prezzo_bambino;
-  if (!confirm(`Confermi ${m.nome} per ${pers} ${pers === 1 ? 'persona' : 'persone'}?` + (totMenu > 0 ? `\n${m.tipo !== 'carta' ? 'Totale menu' : 'Totale coperti'} ${euro(totMenu)}` : ''))) return;
+  if (!confirm(`Confermi ${m.nome} per ${pers} ${pers === 1 ? 'persona' : 'persone'}?` + (totMenu > 0 && !m.coperto_compreso ? `\n${m.tipo !== 'carta' ? 'Totale menu' : 'Totale coperti'} ${euro(totMenu)}` : ''))) return;
   $('btn-inizia').disabled = true;
   try {
     info = await rpc('tavolo_apri', { p_tenant: TENANT, p_tavolo: TAVOLO, p_menu: menuScelto, p_adulti: persone.adulti, p_bambini: persone.bambini });
