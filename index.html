@@ -418,14 +418,11 @@
         </div>
       </div>
       <input type="file" id="file-zip-menu" accept=".zip,application/zip" style="display:none;">
-      <div style="margin-bottom:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <div style="margin-bottom:16px; display:flex; gap:10px; flex-wrap:wrap;">
         <select id="filtro-categoria-prodotti" style="max-width:280px;">
           <option value="">Tutte le categorie</option>
         </select>
         <input type="text" id="ricerca-prodotti" placeholder="🔍 Cerca prodotto..." style="max-width:280px;">
-        <label style="margin-left:auto; display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; white-space:nowrap; color:var(--ink-dim);">
-          <input type="checkbox" id="mostra-inattivi" style="width:16px; height:16px;"> Visualizza inattivi
-        </label>
       </div>
       <p id="suggerimento-trascina-prodotti" style="display:none; font-size:12px; color:var(--ink-dim); margin-top:-10px; margin-bottom:14px;">💡 Trascina i prodotti (⠿) per cambiarne l'ordine in questa categoria.</p>
       <div id="lista-prodotti"></div>
@@ -1470,7 +1467,7 @@
   debugLogEarly('window.supabase disponibile: ' + (typeof window.supabase));
 
   // ================= CONFIGURAZIONE =================
-  const SUPABASE_URL = 'https://tsgxnsvwglhebgelwaxn.supabase.co'; // <-- URL del NUOVO progetto Supabase
+  const SUPABASE_URL = 'https://https://tsgxnsvwglhebgelwaxn.supabase.co.supabase.co'; // <-- URL del NUOVO progetto Supabase
   const SUPABASE_ANON_KEY = 'sb_publishable_RP3UQhYxOMGRHwHFssJstw_2nILJvrG'; // <-- Publishable/anon key del nuovo progetto
   const BUCKET = 'prodotti-immagini';
   // Chiave gratuita da https://www.pexels.com/api/ (iscrizione + generazione istantanea),
@@ -1879,9 +1876,7 @@ const ICONE_CATEGORIA_BASE64 = {
     const cont = document.getElementById('lista-prodotti');
     const filtroId = document.getElementById('filtro-categoria-prodotti').value;
     const query = normalizzaTestoRicerca(document.getElementById('ricerca-prodotti').value);
-    const mostraInattivi = document.getElementById('mostra-inattivi').checked;
     let prodottiFiltrati = filtroId ? prodottiCache.filter(p => p.categoria_id === filtroId) : prodottiCache;
-    if (!mostraInattivi) prodottiFiltrati = prodottiFiltrati.filter(p => p.attivo !== false);
     if (query) prodottiFiltrati = prodottiFiltrati.filter(p => normalizzaTestoRicerca(p.nome).includes(query));
 
     // Il trascinamento per riordinare ha senso solo su una singola categoria e senza
@@ -1907,7 +1902,7 @@ const ICONE_CATEGORIA_BASE64 = {
         .map(pa => { const a = allergeniCache.find(x => x.id === pa.allergene_id); return a ? a.icona : ''; })
         .filter(Boolean).join(' ');
       return `
-      <div class="list-item" ${trascinabile ? `draggable="true" data-id="${p.id}" style="cursor:grab;${!p.attivo ? ' border:2px solid var(--error); border-radius:10px;' : ''}"` : !p.attivo ? 'style="border:2px solid var(--error); border-radius:10px;"' : ''}>
+      <div class="list-item" ${trascinabile ? `draggable="true" data-id="${p.id}" style="cursor:grab;"` : ''}>
         <div class="item-main">
           ${trascinabile ? '<span style="color:var(--ink-dim); font-size:18px; margin-right:2px; user-select:none;">⠿</span>' : ''}
           ${p.immagine_url ? `<img src="${p.immagine_url}" alt="">` : ''}
@@ -1965,7 +1960,6 @@ const ICONE_CATEGORIA_BASE64 = {
   }
 
   document.getElementById('ricerca-prodotti').addEventListener('input', renderProdotti);
-  document.getElementById('mostra-inattivi').addEventListener('change', renderProdotti);
 
   function normalizzaTesto(str) {
     return (str || '')
