@@ -504,6 +504,15 @@
       </div>
       <p class="tv-hint" style="margin-top:-8px;">I tavoli si scelgono dallo spooler, sezione "Tavoli per i QR" (legge i tavoli di Geri). Ogni QR apre l'ordinazione di quel tavolo.</p>
       <div id="tv-lista-tavoli" class="tv-tavoli"></div>
+
+      <div style="margin-top:36px; padding-top:20px; border-top:1px solid var(--border);">
+        <h2 style="font-size:20px; color:var(--error);">Zona pericolosa</h2>
+        <p class="tv-hint" style="margin-top:-8px;">Elimina i dati dei tavoli da questo locale. <b>Non si può annullare.</b></p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+          <button type="button" class="secondary" style="border-color:var(--error); color:var(--error);" id="btn-elimina-coperti">🗑️ Elimina coperti (PLU)</button>
+          <button type="button" class="secondary" style="border-color:var(--error); color:var(--error);" id="btn-elimina-tavoli">🗑️ Elimina tavoli e sessioni</button>
+        </div>
+      </div>
     </section>
 
     <!-- ---- CLIENTI ---- -->
@@ -737,6 +746,12 @@
             </table>
           </div>
         </div>
+      </div>
+
+      <div style="margin-top:36px; padding-top:20px; border-top:1px solid var(--border);">
+        <h2 style="font-size:20px; color:var(--error);">Zona pericolosa</h2>
+        <p class="tv-hint" style="margin-top:-8px;">Elimina tutto lo storico degli ordini di questo locale. <b>Non si può annullare.</b></p>
+        <button type="button" class="secondary" style="border-color:var(--error); color:var(--error); margin-top:10px;" id="btn-elimina-storico">🗑️ Elimina storico ordini</button>
       </div>
     </section>
 
@@ -4889,6 +4904,35 @@ const ICONE_CATEGORIA_BASE64 = {
     return parti.length === 3 ? `${parti[2]}/${parti[1]}/${parti[0]}` : dataIso;
   }
 
+  // ---------- eliminazione storico ordini ----------
+  document.getElementById('btn-elimina-storico').addEventListener('click', async () => {
+    const pw = prompt('Per eliminare tutto lo storico ordini inserisci la password:');
+    if (pw === null) return;
+    if (pw !== 'tds12345') { alert('Password errata.'); return; }
+    if (!confirm('Confermi l\'eliminazione di TUTTI gli ordini di questo locale?\n\nVerranno eliminati:\n• Tutte le righe ordine\n• Tutti i dettagli stampa\n• Tutti gli ordini (asporto, tavolo, ecc.)\n\nNon si può annullare.')) return;
+
+    // Prendi tutti gli ordini del tenant
+    const { data: tuttiOrdini, error: errList } = await sbClient.from('ordini').select('id').eq('tenant_id', currentTenantId);
+    if (errList) { alert('Errore: ' + errList.message); return; }
+
+    if (tuttiOrdini && tuttiOrdini.length) {
+      const oids = tuttiOrdini.map(o => o.id);
+      for (let i = 0; i < oids.length; i += 100) {
+        const batch = oids.slice(i, i + 100);
+        await sbClient.from('ordini_righe').delete().in('ordine_id', batch);
+        await sbClient.from('ordini_stampe_dettaglio').delete().in('ordine_id', batch);
+      }
+      for (let i = 0; i < oids.length; i += 100) {
+        await sbClient.from('ordini').delete().in('id', oids.slice(i, i + 100));
+      }
+    }
+
+    alert('Storico ordini eliminato.');
+    ordiniCache = [];
+    renderOrdini();
+    renderStatistiche([], []);
+  });
+
   // ================= TRASCINAMENTO PER RIORDINARE =================
   function abilitaTrascinamento(contenitoreId, ottieniArray, dopoRiordino, condizioneAttiva) {
     const cont = document.getElementById(contenitoreId);
@@ -5734,6 +5778,57 @@ const ICONE_CATEGORIA_BASE64 = {
     tvCaricaTavoli();
   });
   document.getElementById('btn-aggiorna-tavoli').addEventListener('click', caricaTavoliAyce);
+
+  // ---------- eliminazione dati tavoli ----------
+  document.getElementById('btn-elimina-coperti').addEventListener('click', async () => {
+    const pw = prompt('Per eliminare tutti i coperti (PLU di Geri) inserisci la password:');
+    if (pw === null) return;
+    if (pw !== 'tds12345') { alert('Password errata.'); return; }
+    if (!confirm('Confermi l\'eliminazione di TUTTI i PLU di Geri (coperti) di questo locale?\n\nI menu che usavano un coperto resteranno senza coperto assegnato.\nNon si può annullare.')) return;
+    const { error } = await sbClient.from('plu_geri').delete().eq('tenant_id', currentTenantId);
+    if (error) { alert('Errore: ' + error.message); return; }
+    alert('Coperti eliminati.');
+    tvPluCache = [];
+    tvDisegnaPlu();
+  });
+
+  document.getElementById('btn-elimina-tavoli').addEventListener('click', async () => {
+    const pw = prompt('Per eliminare tutti i tavoli e le sessioni inserisci la password:');
+    if (pw === null) return;
+    if (pw !== 'tds12345') { alert('Password errata.'); return; }
+    if (!confirm('Confermi l\'eliminazione di TUTTI i tavoli, sessioni e ordini tavolo di questo locale?\n\nVerranno eliminati:\n• Tutte le sessioni tavolo (aperte e chiuse)\n• Tutti gli ordini collegati alle sessioni\n• Tutti i tavoli (numeri e QR)\n\nNon si può annullare.')) return;
+
+    // 1) ordini_righe e ordini_stampe_dettaglio degli ordini di sessione
+    const { data: sessioni } = await sbClient.from('sessioni_tavolo').select('id').eq('tenant_id', currentTenantId);
+    if (sessioni && sessioni.length) {
+      const ids = sessioni.map(s => s.id);
+      // ordini di queste sessioni
+      const { data: ordiniSess } = await sbClient.from('ordini').select('id').in('sessione_id', ids);
+      if (ordiniSess && ordiniSess.length) {
+        const oids = ordiniSess.map(o => o.id);
+        for (let i = 0; i < oids.length; i += 100) {
+          const batch = oids.slice(i, i + 100);
+          await sbClient.from('ordini_righe').delete().in('ordine_id', batch);
+          await sbClient.from('ordini_stampe_dettaglio').delete().in('ordine_id', batch);
+        }
+        // elimina gli ordini stessi
+        for (let i = 0; i < oids.length; i += 100) {
+          await sbClient.from('ordini').delete().in('id', oids.slice(i, i + 100));
+        }
+      }
+      // elimina sessioni
+      await sbClient.from('sessioni_tavolo').delete().eq('tenant_id', currentTenantId);
+    }
+
+    // 2) tavoli
+    const { error } = await sbClient.from('tavoli_sala').delete().eq('tenant_id', currentTenantId);
+    if (error) { alert('Errore eliminando i tavoli: ' + error.message); return; }
+
+    alert('Tavoli, sessioni e ordini tavolo eliminati.');
+    tvTavoliCache = [];
+    tvCaricaTavoli();
+    tvCaricaSessioni();
+  });
 
   // QR del singolo tavolo: anteprima grande, PNG da scaricare, stampa, link
   function tvSvgQr(n) { const qr = qrcode(0, 'M'); qr.addData(tvLinkTavolo(n)); qr.make(); return qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true }); }
