@@ -285,20 +285,18 @@
       0 0 9px rgba(255,255,255,.95);
   }
 
-  /* FARO: striscia orizzontale bianca sfocata dalla categoria attiva, DIETRO ai prodotti */
-  #faro-prodotti { display: none; }
-  body.cat-left #faro-prodotti {
-    display: block; position: fixed; left: 0; right: 0;
-    height: 90px; pointer-events: none;
-    z-index: 1;            /* SOTTO .prodotto(2): sta dietro alle card */
-    background: linear-gradient(to right,
-      rgba(255,255,255,0) 0%,
-      rgba(255,255,255,.55) 15%,
-      rgba(255,255,255,.45) 50%,
-      rgba(255,255,255,.25) 80%,
-      rgba(255,255,255,0) 100%);
-    filter: blur(18px);
+  /* Nome categoria sopra ai prodotti: grande, centrato, ben visibile */
+  body.cat-left section.categoria h3 {
+    font-size: 24px; font-weight: 900; text-align: center;
+    color: var(--verde, #3d4b1f);
+    background: linear-gradient(to bottom, rgba(255,255,255,.95), rgba(255,255,255,.7));
+    padding: 10px 14px; border-radius: 14px;
+    margin: 14px 0 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    letter-spacing: .3px;
+    text-transform: uppercase;
   }
+  body.cat-left section.categoria:first-child h3 { margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -333,7 +331,6 @@
 
   <!-- 2. Ordinazione -->
   <div id="v-menu" class="hidden">
-    <div id="faro-prodotti" aria-hidden="true"></div>
     <div class="stato" id="stato-comanda"></div>
     <div id="sotto-ordina">
       <nav class="cat"><div class="scroll" id="tabs-cat"></div></nav>
@@ -755,7 +752,6 @@ function aggiornaRuota() {
     b.style.pointerEvents = '';
     b.style.opacity = String(Math.max(0.4, 1 - n * 0.55)); // i lontani piu sbiaditi
   });
-  posizionaFaro();
 }
 
 // FISHEYE prodotti: al centro pieni, verso i bordi alto/basso rimpiccioliscono (la distanza si sente al limite)
@@ -779,18 +775,6 @@ function fisheyeProdotti() {
   });
 }
 
-// FARO: striscia orizzontale sempre al centro della nav (dove sta visivamente la categoria attiva).
-// In cat-left la categoria attiva e' sempre centrata, quindi puntiamo al centro della nav: cosi'
-// non salta tra un bottone e l'altro e non dipende dalla transition del bottone.
-function posizionaFaro() {
-  const faro = document.getElementById('faro-prodotti');
-  if (!faro) return;
-  const nav = document.querySelector('body.cat-left nav.cat');
-  if (!nav) { faro.style.top = '-9999px'; return; }
-  const r = nav.getBoundingClientRect();
-  const centroY = r.top + r.height / 2;
-  faro.style.top = (centroY - 45) + 'px';   // 90px altezza, centra sulla nav
-}
 let rafFaro = 0;
 window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(fisheyeProdotti); }, { passive: true });
 window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); aggiornaStrumenti(); });
