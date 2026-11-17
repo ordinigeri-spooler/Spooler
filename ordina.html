@@ -1,0 +1,2712 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Ordina online</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#33421f">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ordina online">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Poppins:wght@500;700;800&family=Playfair+Display:wght@600;700;800&family=Pacifico&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7eecb;
+    --panel: #fffdf5;
+    --panel-2: #f0e6bd;
+    --ink: #2f3a20;
+    --ink-dim: #6d7a58;
+    --accent: #e2604f;
+    --accent-ink: #ffffff;
+    --accent-dim: #eeb2a8;
+    --verde: #33421f;
+    --error: #c0392b;
+    --ok: #4f7a3a;
+    --border: #e6d9a2;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    padding-bottom: 90px;
+  }
+  h1, h2, h3 { margin: 0; font-family: 'Baloo 2', 'Segoe UI', sans-serif; }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+  label:first-of-type { margin-top: 0; }
+  input, select, textarea {
+    width: 100%;
+    padding: 12px 14px;
+    background: #fffef9;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--ink);
+    font-size: 15px;
+    outline: none;
+    font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder { color: #b2a878; }
+
+  button {
+    padding: 13px 18px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button:hover { background: #cb4e3e; }
+  button:disabled { background: var(--accent-dim); cursor: not-allowed; }
+  button.secondary { background: transparent; border: 1.5px solid var(--border); color: var(--ink); }
+  button.secondary:hover { background: var(--panel-2); }
+
+  .msg { margin-top: 14px; padding: 11px 14px; border-radius: 8px; font-size: 13px; display: none; }
+  .msg.show { display: block; }
+  .msg.error { background: rgba(217,97,79,0.15); color: var(--error); border: 1px solid rgba(217,97,79,0.3); }
+  .msg.ok { background: rgba(127,166,107,0.15); color: var(--ok); border: 1px solid rgba(127,166,107,0.3); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ---- Iscrizione ---- */
+  .banner-logo-header { background: var(--panel); border-bottom: 1px solid var(--border); }
+  .banner-logo-header #iscrizione-logo { width: 100%; height: 110px; object-fit: cover; display: block; margin: 0; }
+  #iscrizione-hero {
+    height: 220px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+  }
+  #iscrizione-hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, var(--verde) 0%, rgba(51,66,31,0.15) 100%);
+  }
+  #iscrizione-hero-content { position: relative; z-index: 1; padding: 20px 20px 16px; }
+  #iscrizione-nome-locale { font-size: 24px; font-weight: 700; color: #fff; }
+
+  .card { max-width: 480px; margin: 0 auto; padding: 24px 20px; }
+
+  /* ---- Home (dopo il login) ---- */
+  header.home-header {
+    position: relative;
+    padding: 0;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  header.home-header #home-logo { width: 100%; height: 110px; object-fit: cover; display: block; margin: 0; }
+  .home-header-azioni { position: absolute; top: 12px; right: 14px; display: flex; gap: 8px; z-index: 1; }
+  .home-header-btn {
+    position: relative; width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,0.85); border: 1px solid var(--border); font-size: 17px;
+    padding: 0; color: var(--verde);
+  }
+  .home-header-badge {
+    position: absolute; top: -4px; right: -4px; background: var(--accent); color: #fff;
+    border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: 800;
+    align-items: center; justify-content: center;
+  }
+
+  #home-carosello-wrap { padding: 14px 0 6px; }
+  #home-carosello {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  #home-carosello::-webkit-scrollbar { display: none; }
+  #home-carosello img {
+    flex: 0 0 100%; width: 100%; aspect-ratio: 4/3; object-fit: cover;
+    scroll-snap-align: start;
+  }
+  #home-carosello-dots { display: flex; justify-content: center; gap: 7px; margin-top: 10px; }
+  #home-carosello-dots span {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--border);
+  }
+  #home-carosello-dots span.active { background: var(--verde); width: 18px; border-radius: 4px; }
+
+  .home-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    padding: 18px 16px 32px;
+  }
+  .home-tile {
+    grid-column: span 1;
+    background: var(--verde); color: #f7eecb; border-radius: var(--radius);
+    padding: 22px 10px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    font-size: 14px; font-weight: 700; text-align: center; border: none;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+  }
+  .home-tile-icon { font-size: 30px; }
+  .home-tile-full { grid-column: span 2; flex-direction: row; justify-content: center; padding: 16px; }
+
+  /* ---- Sotto-schermate (Chi siamo / Contatti) ---- */
+  header.sub-header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .btn-indietro {
+    background: none; border: none; color: var(--verde); font-weight: 700; font-size: 14px; padding: 4px 0;
+  }
+  .sub-header-titolo { font-size: 17px; font-weight: 800; color: var(--verde); font-family: 'Baloo 2', sans-serif; }
+  .sub-content { max-width: 640px; margin: 0 auto; padding: 20px 18px 40px; }
+  .chi-siamo-testo { font-size: 15px; line-height: 1.6; color: var(--ink); white-space: pre-wrap; margin-bottom: 22px; }
+  .chi-siamo-galleria {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  }
+  .chi-siamo-galleria img {
+    width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; cursor: pointer;
+  }
+  .contatti-riga { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .contatti-riga:last-child { border-bottom: none; }
+  .contatti-riga .icona { font-size: 20px; }
+  .contatti-riga a { color: var(--verde); font-weight: 600; }
+
+  .contatti-mappa-link {
+    display: block; position: relative; margin-bottom: 12px;
+    border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);
+  }
+  .contatti-mappa { width: 100%; height: 220px; border: none; display: block; }
+  .contatti-mappa-overlay {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.15); color: #fff; font-weight: 700; font-size: 14px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .contatti-btn-azione {
+    display: block; text-align: center; background: var(--verde); color: #fff;
+    font-weight: 700; font-size: 15px; padding: 14px; border-radius: var(--radius);
+    margin-bottom: 18px; text-decoration: none;
+  }
+  .contatti-btn-chiama { background: var(--accent); margin-top: 22px; margin-bottom: 0; }
+
+  /* ---- "Scarica il menu": contenuto nascosto, visibile solo quando si stampa ---- */
+  #stampa-menu-contenuto { display: none; }
+  body.stampa-menu-attiva > *:not(#stampa-menu-contenuto) { display: none !important; }
+  body.stampa-menu-attiva #stampa-menu-contenuto {
+    display: block; padding: 24px; font-family: 'Baloo 2', 'Segoe UI', sans-serif; color: var(--ink);
+    background: var(--bg);
+  }
+  .stampa-logo { display: block; max-width: 340px; width: 60%; margin: 0 auto 22px; }
+  #stampa-menu-contenuto h1 { font-size: 26px; margin-bottom: 18px; text-align: center; color: var(--verde); }
+  .stampa-categoria { margin-bottom: 22px; padding: 10px; border-radius: var(--radius); page-break-inside: avoid; }
+  .stampa-categoria h2 {
+    font-size: 20px; font-weight: 800; margin: 0 0 10px; color: var(--verde);
+    border-bottom: 2px solid var(--verde); padding-bottom: 6px;
+  }
+  .stampa-sottocategoria { margin-top: 12px; padding: 8px; border-radius: 8px; }
+  .stampa-sottocategoria h3 { font-size: 15px; font-weight: 700; margin: 0 0 6px; color: var(--verde); opacity: 0.85; }
+  .stampa-prodotto { display: flex; gap: 10px; padding: 7px 4px; align-items: flex-start; page-break-inside: avoid; }
+  .stampa-prodotto-img { width: 46px; height: 46px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+  .stampa-prodotto-info { flex: 1; min-width: 0; }
+  .stampa-prodotto-riga { display: flex; align-items: baseline; gap: 6px; font-size: 14px; }
+  .stampa-prodotto-nome { font-weight: 700; }
+  .stampa-prodotto-prezzo { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .stampa-prodotto-desc { font-size: 12px; color: var(--ink-dim); margin-top: 2px; }
+  .stampa-puntini { flex: 1; border-bottom: 1px dotted #999; margin: 0 4px; transform: translateY(-3px); }
+  @media print {
+    body.stampa-menu-attiva #stampa-menu-contenuto { display: block; background: #fff; }
+    .stampa-prodotto-img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  /* ---- Menu ---- */
+  header.menu-header {
+    padding: 0;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  }
+  header.menu-header #menu-logo { width: 100%; height: 110px; object-fit: cover; display: block; margin: 0; }
+  header.menu-header .nome { display: none; }
+
+  nav.categorie-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px 18px;
+    background: var(--bg);
+    position: fixed; top: var(--header-h, 90px); left: 0; right: 0; z-index: 19;
+    border-bottom: 1px solid var(--border);
+  }
+  nav.categorie-tabs::-webkit-scrollbar { display: none; }
+  nav.categorie-tabs button {
+    background: var(--panel);
+    color: var(--verde);
+    font-weight: 700;
+    border: 1.5px solid var(--border);
+    padding: 9px 18px;
+    font-size: 14px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+  nav.categorie-tabs button.active { background: var(--verde); color: #fff; border-color: var(--verde); opacity: 1; }
+
+  main.menu-main { padding: 18px; padding-top: var(--contenuto-top, 140px); max-width: 700px; margin: 0 auto; }
+  .categoria-blocco { margin-bottom: 28px; scroll-margin-top: var(--contenuto-top, 140px); }
+  .categoria-titolo {
+    font-size: 20px; font-weight: 800; margin-bottom: 4px; color: var(--verde); font-family: 'Baloo 2', sans-serif;
+    text-shadow: -1px -1px 0 rgba(255,255,255,0.85), 1px -1px 0 rgba(255,255,255,0.85), -1px 1px 0 rgba(255,255,255,0.85), 1px 1px 0 rgba(255,255,255,0.85), 0 0 8px rgba(255,255,255,0.9);
+  }
+  .categoria-desc { font-size: 15px; font-weight: 700; color: var(--ink-dim); margin-bottom: 14px; }
+  .sottocategoria-blocco { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border); }
+  .sottocategoria-blocco:first-of-type { margin-top: 8px; border-top: none; padding-top: 0; }
+  .sottocategoria-titolo {
+    font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--verde); font-family: 'Baloo 2', sans-serif; opacity: 0.85;
+    text-shadow: -1px -1px 0 rgba(255,255,255,0.85), 1px -1px 0 rgba(255,255,255,0.85), -1px 1px 0 rgba(255,255,255,0.85), 1px 1px 0 rgba(255,255,255,0.85), 0 0 8px rgba(255,255,255,0.9);
+  }
+
+  .prodotto-card {
+    display: flex;
+    gap: 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+    align-items: center;
+    position: relative;
+  }
+  .prodotto-card img { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+  .prodotto-info { flex: 1; min-width: 0; }
+  .prodotto-nome { font-weight: 700; font-size: 15px; }
+  .prodotto-desc { font-size: 12px; color: var(--ink-dim); margin-top: 2px; }
+  .prodotto-prezzo { font-weight: 700; color: var(--accent); margin-top: 6px; font-size: 14px; }
+  .btn-aggiungi { flex-shrink: 0; padding: 10px 16px; font-size: 13px; }
+  .badge-novita {
+    display: inline-block; background: linear-gradient(135deg, #ff7a45, #ff4d4d); color: #fff;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 20px;
+    margin-bottom: 4px; text-transform: uppercase;
+  }
+  .prodotto-allergeni { font-size: 14px; margin-top: 4px; letter-spacing: 1px; }
+
+  .filtro-allergeni-barra {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 14px; margin: 0 0 16px; font-size: 13px; font-weight: 600; color: var(--verde);
+  }
+  .filtro-allergeni-barra .conteggio {
+    background: var(--accent); color: #fff; border-radius: 50%; width: 18px; height: 18px;
+    font-size: 11px; display: inline-flex; align-items: center; justify-content: center; margin-left: 6px;
+  }
+  .filtro-allergeni-avviso {
+    background: rgba(217,97,79,0.12); border: 1px solid rgba(217,97,79,0.3); color: var(--error);
+    border-radius: var(--radius); padding: 10px 14px; margin: 0 0 16px; font-size: 13px; display: flex;
+    align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .filtro-allergeni-avviso button { width: auto; padding: 4px 10px; font-size: 12px; }
+  .lista-allergeni-filtro label {
+    display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 15px;
+  }
+  .lista-allergeni-filtro label:last-child { border-bottom: none; }
+  .lista-allergeni-filtro input { width: 22px; height: 22px; accent-color: var(--accent); }
+  .lista-allergeni-filtro .icona { font-size: 22px; }
+  .badge-qty-prodotto {
+    position: absolute; top: -8px; left: -8px; background: var(--accent); color: var(--accent-ink);
+    min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; border: 2px solid var(--panel);
+    display: none; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 1;
+  }
+
+  /* ---- Carrello flottante ---- */
+  #carrello-fab {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: var(--accent-ink); border-radius: 30px;
+    padding: 14px 24px; font-weight: 700; font-size: 14px;
+    display: none; align-items: center; gap: 10px; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 30; border: none;
+  }
+  #carrello-fab.show { display: flex; }
+  #carrello-badge {
+    background: #fff; color: var(--accent); border-radius: 50%;
+    width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800;
+  }
+
+  /* ---- Modal generico ---- */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    align-items: flex-end; justify-content: center; z-index: 100;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal-sheet {
+    background: var(--panel); border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 480px; max-height: 94vh;
+    padding: 24px 20px 20px;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  @media (min-width: 540px) {
+    .modal-backdrop { align-items: center; }
+    .modal-sheet { border-radius: var(--radius); max-height: 90vh; }
+  }
+
+  /* Il visualizzatore foto deve sempre stare sopra a qualsiasi altro popup e apparire
+     centrato e in primo piano, anche su schermi stretti (mai come "foglio dal basso"). */
+  #modal-foto-ingrandita { z-index: 200; align-items: center; }
+  #modal-foto-ingrandita .modal-sheet { border-radius: var(--radius); }
+  /* Il modal carrello resta a scroll unico (contenuto tipicamente più corto) */
+  #modal-carrello .modal-sheet { overflow-y: auto; display: block; max-height: 90vh; }
+
+  #modal-prodotto-dettaglio .modal-sheet > *:not(#dettaglio-variazioni) { flex-shrink: 0; }
+  #dettaglio-variazioni {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    margin: 4px -20px;
+    padding: 4px 20px;
+  }
+  #modal-hai-bisogno-anche .modal-sheet > *:not(#hai-bisogno-anche-opzioni) { flex-shrink: 0; }
+  #hai-bisogno-anche-opzioni {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    margin: 4px -20px;
+    padding: 4px 20px;
+  }
+
+  .var-gruppo {
+    margin-bottom: 18px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .var-gruppo-titolo { font-weight: 700; font-size: 15px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items:center; }
+  .var-gruppo-titolo .hint { font-size: 11px; color: var(--ink-dim); font-weight: 400; }
+  .var-opzione-riga {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 15px;
+  }
+  .var-opzione-riga:last-child { border-bottom: none; }
+  .var-opzione-riga label { display:flex; align-items:center; gap:12px; margin:0; font-size:15px; color:var(--ink); flex:1; }
+  .var-opzione-riga input { width: 20px; height: 20px; accent-color: var(--accent); }
+  .var-opzione-extra { color: var(--ink-dim); font-size: 13px; }
+
+  .suggerito-prodotto-riga {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .suggerito-prodotto-riga:last-child { border-bottom: none; }
+  .suggerito-prodotto-img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .suggerito-prodotto-img-vuota { background: var(--panel-2); }
+  .suggerito-prodotto-info { flex: 1; min-width: 0; }
+  .suggerito-prodotto-nome { font-weight: 700; font-size: 15px; }
+  .suggerito-prodotto-desc { font-size: 12px; color: var(--ink-dim); margin-top: 2px; }
+  .suggerito-prodotto-prezzo { font-weight: 700; color: var(--accent); margin-top: 4px; font-size: 14px; }
+  .suggerito-prodotto-checkbox input { width: 24px; height: 24px; accent-color: var(--accent); }
+
+  .qty-selector { display: flex; align-items: center; gap: 14px; justify-content:center; margin: 16px 0; }
+  .qty-selector button { width: 40px; height: 40px; padding: 0; font-size: 20px; border-radius: 50%; }
+  .qty-selector .qty-val { font-size: 20px; font-weight: 700; min-width: 30px; text-align: center; }
+
+  /* ---- Carrello ---- */
+  .carrello-riga {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px;
+  }
+  .carrello-riga:last-child { border-bottom: none; }
+  .carrello-riga-info { flex: 1; }
+  .carrello-riga-nome { font-weight: 600; font-size: 14px; }
+  .carrello-riga-tags { font-size: 12px; color: var(--ink-dim); margin-top: 2px; }
+  .carrello-riga-prezzo { font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .carrello-riga-azioni {
+    display: flex; align-items: center; gap: 8px; margin-top: 6px;
+  }
+  .qty-mini-btn {
+    width: 26px; height: 26px; padding: 0; font-size: 15px; border-radius: 50%;
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--ink);
+  }
+  .qty-mini-btn:hover { background: var(--border); }
+  .qty-mini-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .var-opzione-riga:has(.chk-var-cliente:disabled:not(:checked)) { opacity: 0.4; }
+  .qty-mini-val { font-size: 13px; font-weight: 600; min-width: 16px; text-align: center; }
+  .btn-modifica-riga {
+    height: 26px; padding: 0 10px; font-size: 12px; border-radius: 13px; margin-left: 4px;
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--ink);
+  }
+
+  /* ---- Popup "Hai bisogno anche" — testo e controlli più grandi, ben leggibili ---- */
+  #modal-hai-bisogno-anche h3 { font-size: 22px; }
+  #modal-hai-bisogno-anche .var-gruppo { padding: 18px 18px; margin-bottom: 20px; }
+  #modal-hai-bisogno-anche .var-gruppo-titolo { font-size: 19px; flex-wrap: wrap; gap: 4px; }
+  #modal-hai-bisogno-anche .var-gruppo-titolo .hint { font-size: 14px; flex-basis: 100%; }
+  #modal-hai-bisogno-anche .var-opzione-riga { padding: 18px 0; font-size: 18px; }
+  #modal-hai-bisogno-anche .var-opzione-riga label { font-size: 18px; gap: 14px; }
+  #modal-hai-bisogno-anche .var-opzione-extra { font-size: 15px; }
+  #modal-hai-bisogno-anche .var-opzione-riga input[type="checkbox"],
+  #modal-hai-bisogno-anche .var-opzione-riga input[type="radio"] { width: 26px; height: 26px; }
+  #modal-hai-bisogno-anche .qty-mini-btn { width: 38px; height: 38px; font-size: 20px; }
+  #modal-hai-bisogno-anche .qty-mini-val { font-size: 18px; min-width: 26px; }
+  #modal-hai-bisogno-anche #btn-conferma-hai-bisogno-anche,
+  #modal-hai-bisogno-anche #btn-salta-hai-bisogno-anche { font-size: 16px; padding: 16px; }
+  #modal-hai-bisogno-anche .suggerito-prodotto-riga { padding: 16px 0; gap: 14px; }
+  #modal-hai-bisogno-anche .suggerito-prodotto-img { width: 68px; height: 68px; }
+  #modal-hai-bisogno-anche .suggerito-prodotto-nome { font-size: 17px; }
+  #modal-hai-bisogno-anche .suggerito-prodotto-desc { font-size: 13px; }
+  #modal-hai-bisogno-anche .suggerito-prodotto-prezzo { font-size: 15px; }
+  #modal-hai-bisogno-anche .suggerito-prodotto-checkbox input { width: 28px; height: 28px; }
+  .btn-modifica-riga:hover { background: var(--border); }
+
+  .totale-riga {
+    display: flex; justify-content: space-between; font-size: 17px; font-weight: 700;
+    padding-top: 14px; margin-top: 6px; border-top: 2px solid var(--border);
+  }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--ink-dim); font-size: 14px; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--panel-2); color: var(--ink-dim); border: 1px solid var(--border); }
+
+  .footer-locale {
+    margin-top: 30px;
+    padding: 22px 18px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+  .footer-locale .footer-nome { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+  .footer-locale .footer-riga { font-size: 13px; color: var(--ink-dim); margin-top: 4px; }
+
+  /* ---- Conferma ---- */
+  #schermata-conferma .card { text-align: center; padding-top: 60px; }
+  #schermata-conferma .check-icon {
+    width: 70px; height: 70px; border-radius: 50%; background: var(--ok); color: #14170f;
+    display: flex; align-items: center; justify-content: center; font-size: 34px; margin: 0 auto 20px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ ISCRIZIONE / ACCESSO ============ -->
+<div class="screen active" id="schermata-iscrizione">
+  <header class="banner-logo-header">
+    <img id="iscrizione-logo" style="display:none;">
+  </header>
+  <div id="iscrizione-hero">
+    <div id="iscrizione-hero-content">
+      <div id="iscrizione-nome-locale">Il tuo locale</div>
+    </div>
+  </div>
+
+  <div class="card">
+
+    <!-- ---- LOGIN ---- -->
+    <div id="vista-login">
+      <h2 style="margin-bottom:6px;">Accedi</h2>
+      <p style="color:var(--ink-dim); font-size:14px; margin:0 0 20px;">Inserisci le tue credenziali per ordinare.</p>
+      <form id="form-login-cliente">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="mario.rossi@email.it" required>
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" required>
+        <button type="submit" id="btn-login-cliente" style="width:100%; margin-top:18px;">Accedi</button>
+      </form>
+      <div class="msg" id="login-cliente-msg"></div>
+      <p style="text-align:center; margin-top:18px; font-size:13px;">
+        Non hai un account? <a href="#" id="link-vai-registrazione" style="color:var(--accent); font-weight:600;">Registrati</a>
+      </p>
+      <p style="text-align:center; margin-top:6px; font-size:13px;">
+        <a href="#" id="link-password-dimenticata" style="color:var(--ink-dim);">Password dimenticata?</a>
+      </p>
+    </div>
+
+    <!-- ---- REGISTRAZIONE ---- -->
+    <div id="vista-registrazione" style="display:none;">
+      <h2 style="margin-bottom:6px;">Crea il tuo account</h2>
+      <p style="color:var(--ink-dim); font-size:14px; margin:0 0 16px;">Bastano pochi dati per iniziare a ordinare.</p>
+      <form id="form-registrazione-cliente">
+        <label for="reg-nome">Nome</label>
+        <input type="text" id="reg-nome" placeholder="Mario" required>
+        <label for="reg-cognome">Cognome</label>
+        <input type="text" id="reg-cognome" placeholder="Rossi" required>
+        <label for="reg-indirizzo">Indirizzo</label>
+        <input type="text" id="reg-indirizzo" placeholder="Via Roma 12">
+        <label for="reg-telefono">Cellulare</label>
+        <input type="tel" id="reg-telefono" placeholder="333 1234567" required>
+        <label for="reg-email">Email</label>
+        <input type="email" id="reg-email" placeholder="mario.rossi@email.it" required>
+        <label for="reg-password">Password</label>
+        <input type="password" id="reg-password" placeholder="Almeno 6 caratteri" required minlength="6">
+        <button type="submit" id="btn-registrati" style="width:100%; margin-top:18px;">Registrati</button>
+      </form>
+      <div class="msg" id="registrazione-msg"></div>
+      <p style="text-align:center; margin-top:18px; font-size:13px;">
+        Hai già un account? <a href="#" id="link-vai-login" style="color:var(--accent); font-weight:600;">Accedi</a>
+      </p>
+    </div>
+
+    <!-- ---- RECUPERO PASSWORD ---- -->
+    <div id="vista-recupera" style="display:none;">
+      <h2 style="margin-bottom:6px;">Recupera password</h2>
+      <p style="color:var(--ink-dim); font-size:14px; margin:0 0 16px;">Ti invieremo un link via email per reimpostarla.</p>
+      <form id="form-recupera-password">
+        <label for="recupera-email">Email</label>
+        <input type="email" id="recupera-email" placeholder="mario.rossi@email.it" required>
+        <button type="submit" id="btn-recupera-password" style="width:100%; margin-top:18px;">Invia link di ripristino</button>
+      </form>
+      <div class="msg" id="recupera-msg"></div>
+      <p style="text-align:center; margin-top:18px; font-size:13px;">
+        <a href="#" id="link-torna-login" style="color:var(--accent); font-weight:600;">Torna al login</a>
+      </p>
+    </div>
+
+    <!-- ---- NUOVA PASSWORD (dopo click sul link email) ---- -->
+    <div id="vista-nuova-password" style="display:none;">
+      <h2 style="margin-bottom:6px;">Imposta una nuova password</h2>
+      <form id="form-nuova-password">
+        <label for="nuova-password-campo">Nuova password</label>
+        <input type="password" id="nuova-password-campo" placeholder="Almeno 6 caratteri" required minlength="6">
+        <button type="submit" id="btn-nuova-password" style="width:100%; margin-top:18px;">Salva nuova password</button>
+      </form>
+      <div class="msg" id="nuova-password-msg"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ MENU ============ -->
+<!-- ============ HOME (dopo il login) ============ -->
+<div class="screen" id="schermata-home">
+  <header class="home-header">
+    <img id="home-logo" style="display:none;">
+    <div class="home-header-azioni">
+      <button type="button" id="btn-carrello-home" class="home-header-btn">
+        🛒<span id="carrello-badge-home" class="home-header-badge" style="display:none;">0</span>
+      </button>
+      <button type="button" id="btn-account-home" class="home-header-btn">⚙️</button>
+    </div>
+  </header>
+
+  <div id="home-carosello-wrap">
+    <div id="home-carosello"></div>
+    <div id="home-carosello-dots"></div>
+  </div>
+
+  <div class="home-grid">
+    <button type="button" class="home-tile" id="tile-chi-siamo">
+      <span class="home-tile-icon">📖</span><span>Chi siamo</span>
+    </button>
+    <button type="button" class="home-tile" id="tile-ordina">
+      <span class="home-tile-icon">🛍️</span><span>Ordina</span>
+    </button>
+    <button type="button" class="home-tile" id="tile-area-personale">
+      <span class="home-tile-icon">👤</span><span>Area personale</span>
+    </button>
+    <button type="button" class="home-tile" id="tile-scarica-menu">
+      <span class="home-tile-icon">⬇️</span><span>Scarica il menu</span>
+    </button>
+    <button type="button" class="home-tile home-tile-full" id="tile-contatti">
+      <span class="home-tile-icon">☎️</span><span>Contatti</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ CHI SIAMO ============ -->
+<div class="screen" id="schermata-chi-siamo">
+  <header class="sub-header">
+    <button type="button" class="btn-indietro" onclick="mostraSchermata('schermata-home')">← Indietro</button>
+    <div class="sub-header-titolo">Chi siamo</div>
+  </header>
+  <div class="sub-content">
+    <div id="chi-siamo-testo" class="chi-siamo-testo"></div>
+    <div id="chi-siamo-galleria" class="chi-siamo-galleria"></div>
+  </div>
+</div>
+
+<!-- ============ CONTATTI ============ -->
+<div class="screen" id="schermata-contatti">
+  <header class="sub-header">
+    <button type="button" class="btn-indietro" onclick="mostraSchermata('schermata-home')">← Indietro</button>
+    <div class="sub-header-titolo">Contatti</div>
+  </header>
+  <div class="sub-content" id="contatti-contenuto"></div>
+</div>
+
+<!-- ============ MODAL FILTRO ALLERGENI ============ -->
+<div class="modal-backdrop" id="modal-filtro-allergeni">
+  <div class="modal-sheet">
+    <h3>Filtra per allergeni</h3>
+    <p style="color:var(--ink-dim); font-size:13px; margin-top:6px;">Spunta gli allergeni a cui sei allergico o intollerante: nasconderemo dal menu i piatti che li contengono.</p>
+    <div class="lista-allergeni-filtro" id="lista-allergeni-filtro" style="margin-top:12px; max-height:50vh; overflow-y:auto;"></div>
+    <button type="button" style="width:100%; margin-top:16px;" onclick="closeModal('modal-filtro-allergeni')">Applica</button>
+    <button type="button" class="secondary" style="width:100%; margin-top:10px;" id="btn-azzera-filtro-allergeni">Rimuovi tutti i filtri</button>
+  </div>
+</div>
+
+<!-- ============ MODAL FOTO INGRANDITA (galleria chi siamo) ============ -->
+<div class="modal-backdrop" id="modal-foto-ingrandita">
+  <div class="modal-sheet" style="padding:10px; max-width:600px;">
+    <img id="foto-ingrandita-img" style="width:100%; border-radius:12px; display:block;">
+    <button type="button" class="secondary" style="width:100%; margin-top:12px;" onclick="closeModal('modal-foto-ingrandita')">Chiudi</button>
+  </div>
+</div>
+
+<!-- ============ CONTENUTO STAMPABILE "SCARICA IL MENU" (nascosto, visibile solo in stampa) ============ -->
+<div id="stampa-menu-contenuto"></div>
+
+<div class="screen" id="schermata-menu">
+  <header class="menu-header">
+    <button id="btn-home-da-menu" style="position:absolute; top:12px; left:14px; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,0.85); border:1px solid var(--border); font-size:17px; padding:0; color:var(--verde); z-index:1;" onclick="mostraSchermata('schermata-home')">🏠</button>
+    <button id="btn-carrello-header" style="position:absolute; top:12px; right:60px; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,0.85); border:1px solid var(--border); font-size:17px; padding:0; color:var(--verde); z-index:1;">
+      🛒<span id="carrello-badge-header" style="position:absolute; top:-4px; right:-4px; background:var(--accent); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; font-weight:800; display:none; align-items:center; justify-content:center;">0</span>
+    </button>
+    <button id="btn-account" style="position:absolute; top:12px; right:14px; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,0.85); border:1px solid var(--border); font-size:18px; padding:0; color:var(--verde); z-index:1;">⚙️</button>
+    <div id="badge-saldo-header" style="position:absolute; top:56px; right:14px; font-size:11px; font-weight:700; color:#fff; background:rgba(0,0,0,0.45); padding:2px 8px; border-radius:10px; display:none; z-index:1;"></div>
+    <img id="menu-logo" style="display:none;">
+    <div class="nome" id="menu-nome-locale">—</div>
+  </header>
+  <nav class="categorie-tabs" id="categorie-tabs"></nav>
+  <main class="menu-main" id="menu-main"></main>
+
+  <button id="carrello-fab">
+    <span id="carrello-badge">0</span>
+    <span id="carrello-fab-totale">Vedi carrello — €0.00</span>
+  </button>
+</div>
+
+<!-- ============ MODAL SCELTA VARIAZIONI ============ -->
+<div class="modal-backdrop" id="modal-prodotto-dettaglio">
+  <div class="modal-sheet">
+    <div id="dettaglio-header" style="display:flex; gap:12px; align-items:flex-start;">
+      <img id="dettaglio-immagine" style="width:68px; height:68px; object-fit:cover; border-radius:10px; display:none; flex-shrink:0; cursor:pointer;">
+      <div style="flex:1; min-width:0;">
+        <h3 id="dettaglio-nome" style="margin:0;"></h3>
+        <p id="dettaglio-descrizione" style="color:var(--ink-dim); font-size:13px; margin-top:4px;"></p>
+        <div id="dettaglio-allergeni" style="font-size:13px; margin-top:4px; display:none;"></div>
+      </div>
+    </div>
+
+    <div id="dettaglio-limite-aggiunte" style="display:none; font-size:12px; font-weight:700; margin:10px 0 -4px;"></div>
+
+    <div id="dettaglio-variazioni"></div>
+
+    <div class="qty-selector">
+      <button type="button" class="secondary" id="btn-qty-meno">−</button>
+      <span class="qty-val" id="dettaglio-qty">1</span>
+      <button type="button" class="secondary" id="btn-qty-piu">+</button>
+    </div>
+
+    <div class="msg" id="dettaglio-msg"></div>
+    <button id="btn-conferma-aggiungi" style="width:100%;">Aggiungi al carrello — €0.00</button>
+    <button class="secondary" style="width:100%; margin-top:10px;" onclick="annullaModificaDettaglio()">Annulla</button>
+  </div>
+</div>
+
+<!-- ============ MODAL "HAI BISOGNO ANCHE" (post aggiunta carrello) ============ -->
+<div class="modal-backdrop" id="modal-hai-bisogno-anche">
+  <div class="modal-sheet">
+    <h3>Hai bisogno anche di...?</h3>
+    <div id="hai-bisogno-anche-opzioni"></div>
+    <button id="btn-conferma-hai-bisogno-anche" style="width:100%; margin-top:14px;">Aggiungi al carrello</button>
+    <button class="secondary" style="width:100%; margin-top:10px;" id="btn-salta-hai-bisogno-anche">Prosegui senza aggiungere nulla</button>
+  </div>
+</div>
+
+<!-- ============ MODAL CARRELLO ============ -->
+<div class="modal-backdrop" id="modal-carrello">
+  <div class="modal-sheet">
+    <h3>Il tuo ordine</h3>
+    <div id="carrello-righe" style="margin-top:14px;"></div>
+    <div class="totale-riga">
+      <span>Totale</span>
+      <span id="carrello-totale">€0.00</span>
+    </div>
+
+    <div style="margin-top:20px; padding-top:18px; border-top:1px solid var(--border);">
+      <label style="margin-top:0;">Ritiro — giorno</label>
+      <input type="date" id="campo-data-ritiro" required>
+      <label for="campo-ora-ritiro">Ritiro — fascia oraria</label>
+      <select id="campo-ora-ritiro" required>
+        <option value="">Seleziona prima il giorno</option>
+      </select>
+      <label for="campo-note">Note per l'ordine <span style="font-style:italic;">(facoltative)</span></label>
+      <textarea id="campo-note" rows="2" placeholder="Es. senza cipolla, citofono rotto..."></textarea>
+
+      <div id="blocco-pagamento-prepagato" style="display:none; margin-top:16px; padding:12px 14px; background:var(--panel-2); border-radius:8px;">
+        <label style="display:flex; align-items:center; gap:10px; margin:0; font-size:14px;">
+          <input type="checkbox" id="chk-paga-prepagato" style="width:auto;">
+          Usa il tuo saldo prepagato (disponibile: <span id="saldo-disponibile-testo">€0.00</span>)
+        </label>
+        <p id="dettaglio-prepagato-parziale" style="font-size:13px; color:var(--ink-dim); margin-top:8px; display:none;"></p>
+      </div>
+    </div>
+
+    <div class="msg" id="carrello-msg"></div>
+    <button id="btn-conferma-ordine" style="width:100%; margin-top:18px;">Conferma ordine</button>
+    <button class="secondary" style="width:100%; margin-top:10px;" onclick="closeModal('modal-carrello')">Continua a ordinare</button>
+  </div>
+</div>
+
+<!-- ============ CONFERMA ORDINE ============ -->
+<div class="screen" id="schermata-conferma">
+  <div class="card">
+    <div class="check-icon">✓</div>
+    <h2>Ordine ricevuto!</h2>
+    <p style="color:var(--ink-dim); margin-top:10px;">Il tuo ordine sarà pronto per il ritiro:</p>
+    <p style="font-size:18px; font-weight:700; margin-top:6px;" id="conferma-data-ora"></p>
+    <p style="font-size:13px; color:var(--error); margin-top:14px; display:none;" id="conferma-avviso"></p>
+    <p style="font-size:13px; color:var(--accent); margin-top:10px; display:none;" id="conferma-riepilogo-prepagato"></p>
+    <button id="btn-nuovo-ordine" style="margin-top:30px;">Fai un altro ordine</button>
+  </div>
+</div>
+
+<div style="position:fixed; bottom:4px; right:6px; font-size:10px; color:#b2a878; z-index:1;">v2026-08-08-e (descrizione categoria più visibile: grassetto e più grande)</div>
+
+<!-- ============ MODAL INSTALLA APP ============ -->
+<div class="modal-backdrop" id="modal-installa-app">
+  <div class="modal-sheet" style="text-align:center;">
+    <div style="font-size:44px; margin-bottom:10px;">📲</div>
+    <h3 style="margin-bottom:10px;">Installa l'app</h3>
+    <div id="installa-app-contenuto"></div>
+    <button type="button" id="btn-installa-app-conferma" style="width:100%; margin-top:18px;">Installa</button>
+    <button type="button" class="secondary" id="btn-installa-app-dopo" style="width:100%; margin-top:10px;">Non ora</button>
+  </div>
+</div>
+
+<!-- ============ MODAL VERIFICA EMAIL (dopo registrazione) ============ -->
+<div class="modal-backdrop" id="modal-verifica-email">
+  <div class="modal-sheet" style="text-align:center;">
+    <div style="font-size:44px; margin-bottom:10px;">📧</div>
+    <h3 style="margin-bottom:10px;">Controlla la tua email</h3>
+    <p style="color:var(--ink-dim); font-size:14px;">Ti abbiamo inviato un'email di conferma. Apri il link che trovi al suo interno per verificare l'account, poi torna qui e accedi.</p>
+    <p style="color:var(--ink-dim); font-size:13px; margin-top:8px;">Non la vedi? Controlla anche nella cartella <strong>Spam</strong> o "Posta indesiderata".</p>
+    <button type="button" style="width:100%; margin-top:18px;" onclick="closeModal('modal-verifica-email')">Ho capito</button>
+  </div>
+</div>
+
+<!-- ============ MODAL NOTIFICA GESTORE ============ -->
+<div class="modal-backdrop" id="modal-notifica">
+  <div class="modal-sheet" style="text-align:center;">
+    <img id="notifica-immagine" style="width:100%; max-height:220px; object-fit:cover; border-radius:12px; display:none; margin-bottom:16px;">
+    <h3 id="notifica-titolo" style="margin-bottom:10px;"></h3>
+    <p id="notifica-testo" style="color:var(--ink-dim); font-size:14px; white-space:pre-wrap;"></p>
+    <button type="button" style="width:100%; margin-top:18px;" onclick="closeModal('modal-notifica')">Ho capito</button>
+  </div>
+</div>
+
+<!-- ============ MODAL ACCOUNT (Profilo + I miei ordini) ============ -->
+<div class="modal-backdrop" id="modal-account">
+  <div class="modal-sheet">
+    <h3 style="margin-bottom:16px;">Il tuo account</h3>
+
+    <div style="display:flex; gap:8px; margin-bottom:18px;">
+      <button type="button" class="tab-account active" data-vista="profilo" style="flex:1; padding:10px; font-size:13px;">👤 Utente</button>
+      <button type="button" class="tab-account secondary" data-vista="ordini" style="flex:1; padding:10px; font-size:13px;">🧾 Ordini</button>
+    </div>
+
+    <div id="vista-account-profilo">
+      <div id="account-profilo-dati"></div>
+      <button type="button" id="btn-logout-account" class="secondary" style="width:100%; margin-top:20px;">Esci dall'account</button>
+    </div>
+
+    <div id="vista-account-ordini" style="display:none;">
+      <div id="account-lista-ordini"></div>
+    </div>
+
+    <button type="button" class="secondary" style="width:100%; margin-top:16px;" onclick="closeModal('modal-account')">Chiudi</button>
+  </div>
+</div>
+
+<script>
+  // ================= CONFIGURAZIONE =================
+  const SUPABASE_URL = 'https://tsgxnsvwglhebgelwaxn.supabase.co'; // <-- URL del NUOVO progetto Supabase
+  const SUPABASE_ANON_KEY = 'sb_publishable_RP3UQhYxOMGRHwHFssJstw_2nILJvrG'; // <-- Publishable/anon key del nuovo progetto
+  const BUCKET = 'prodotti-immagini';
+
+  // Rete di sicurezza diagnostica: se qualcosa va storto in modo imprevisto (anche fuori
+  // dai blocchi try/catch espliciti), lo mostriamo invece di lasciarlo sparire in silenzio.
+  window.addEventListener('error', (e) => {
+    console.error('Errore JS non gestito:', e.error || e.message);
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    console.error('Promise non gestita:', e.reason);
+  });
+
+  const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+
+  const params = new URLSearchParams(window.location.search);
+  const TENANT_ID = params.get('tenant');
+
+  let clienteCorrente = null;
+  let impostazioni = null;
+  let categorieList = [];
+  let categorieTopLevel = [];
+  let figlieDiCategoria = {};
+  let prodottiList = [];
+  let allergeniList = []; // tutti gli allergeni configurati per questo locale
+  let allergeniSelezionatiFiltro = new Set(); // allergeni scelti dal cliente per nascondere i piatti che li contengono
+  let variazioniPerProdotto = {}; // prodotto_id -> [{variazione, opzioni:[...]}]
+  let gruppiPostCarrelloPerProdotto = {}; // prodotto_id -> [{gruppo, opzioni:[...]}] mostrati DOPO "Aggiungi al carrello"
+  let voceCarrelloInSospeso = null; // la riga carrello pronta da spingere dopo il popup "Hai bisogno anche"
+  let carrello = []; // {chiave, prodotto_id, nome, prezzoUnitario, quantita, opzioniScelte:[{nome, gruppo, prezzo}]}
+  let prodottoInDettaglio = null;
+  let selezioniCorrentiDettaglio = {}; // variazioneId -> [opzioneId,...]
+  let qtyCorrente = 1;
+  let modificaCarrelloChiave = null; // se valorizzata, "Aggiungi al carrello" aggiorna questa riga invece di crearne una nuova
+  let gruppiAttiviDettaglio = []; // gruppi variazione attualmente renderizzati nel modal dettaglio (normali, + post-carrello se in modifica)
+
+  let modalStack = []; // id dei modal attualmente aperti, nell'ordine di apertura
+  let chiusuraDaTastoIndietro = false; // evita loop tra closeModal() e history.back()
+
+  function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'msg show ' + type;
+  }
+  function clearMsg(id) { document.getElementById(id).className = 'msg'; }
+  function openModal(id) {
+    document.getElementById(id).classList.add('show');
+    document.body.style.overflow = 'hidden';
+    if (id === 'modal-prodotto-dettaglio') {
+      const sheet = document.querySelector(`#${id} .modal-sheet`);
+      sheet.style.maxHeight = Math.round(window.innerHeight * 0.92) + 'px';
+    }
+    if (id === 'modal-hai-bisogno-anche') {
+      // Qui vogliamo una finestra grande e ben visibile a prescindere da quante opzioni
+      // ci sono: altezza fissa (non solo massima), non solo "quanto basta per il contenuto".
+      const sheet = document.querySelector(`#${id} .modal-sheet`);
+      const altezza = Math.round(window.innerHeight * 0.85) + 'px';
+      sheet.style.height = altezza;
+      sheet.style.maxHeight = altezza;
+    }
+    // Registriamo l'apertura nella cronologia del browser: così il tasto indietro
+    // (fisico su Android o del browser) chiude QUESTO popup invece di uscire dall'app.
+    modalStack.push(id);
+    history.pushState({ modalId: id }, '', location.href);
+  }
+  window.closeModal = function(id) {
+    document.getElementById(id).classList.remove('show');
+    modalStack = modalStack.filter(m => m !== id);
+    if (!document.querySelector('.modal-backdrop.show')) {
+      document.body.style.overflow = '';
+    }
+    // Se la chiusura arriva da un pulsante (Annulla/X/backdrop) e non dal tasto indietro,
+    // NON usiamo history.back(): è asincrono, e se subito dopo (nello stesso click) si apre
+    // un altro modal — es. chiudiamo il dettaglio prodotto e apriamo subito "Hai bisogno
+    // anche" — il back() in ritardo arriva DOPO il nuovo openModal() e chiude quel popup
+    // un istante dopo averlo aperto (il "lampeggia e sparisce" che capitava). Ci limitiamo
+    // quindi a rietichettare lo stato corrente senza navigare, che è sincrono e sicuro.
+    if (!chiusuraDaTastoIndietro) {
+      history.replaceState({ ancora: true }, '', location.href);
+    }
+  }
+
+  // Tasto indietro (fisico Android o del browser): se c'è un popup aperto lo chiude,
+  // altrimenti "intrappola" la navigazione per evitare che l'app si chiuda per sbaglio
+  // mentre si sta prendendo un ordine.
+  window.addEventListener('popstate', () => {
+    if (modalStack.length) {
+      chiusuraDaTastoIndietro = true;
+      closeModal(modalStack[modalStack.length - 1]);
+      chiusuraDaTastoIndietro = false;
+    } else {
+      history.pushState({ ancora: true }, '', location.href);
+    }
+  });
+  history.pushState({ ancora: true }, '', location.href);
+
+  // ================= INSTALLAZIONE APP (PWA / "Aggiungi a Home") =================
+  let deferredInstallPrompt = null;
+  let menuGiaVisibile = false;
+  let installPromptMostratoQuestaSessione = false;
+
+  function isStandaloneApp() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+  function isIOSDevice() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  }
+  function dovremmoProporreInstallazione() {
+    if (isStandaloneApp()) return false; // già installata/aperta come app: non chiedere di nuovo
+    const scorso = localStorage.getItem('pwa_install_dismesso_il');
+    if (scorso && (Date.now() - Number(scorso)) / (1000 * 60 * 60 * 24) < 30) return false; // rifiutata di recente
+    return true;
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    provaProponiInstallazione();
+  });
+
+  function provaProponiInstallazione() {
+    if (!menuGiaVisibile || installPromptMostratoQuestaSessione) return;
+    if (!deferredInstallPrompt && !isIOSDevice()) return; // né Android/Chrome con prompt pronto, né iOS: niente da proporre
+    if (!dovremmoProporreInstallazione()) return;
+    installPromptMostratoQuestaSessione = true;
+
+    const cont = document.getElementById('installa-app-contenuto');
+    const btnConferma = document.getElementById('btn-installa-app-conferma');
+    if (isIOSDevice() && !deferredInstallPrompt) {
+      cont.innerHTML = `<p style="color:var(--ink-dim); font-size:14px;">Per installarla sulla schermata Home: tocca il pulsante <strong>Condividi</strong> ⬆️ in basso nel browser, poi scegli <strong>"Aggiungi alla schermata Home"</strong>.</p>`;
+      btnConferma.style.display = 'none';
+    } else {
+      cont.innerHTML = `<p style="color:var(--ink-dim); font-size:14px;">Installa l'app per ordinare più velocemente, con un'icona dedicata sulla schermata Home del telefono.</p>`;
+      btnConferma.style.display = 'block';
+    }
+    openModal('modal-installa-app');
+  }
+
+  document.getElementById('btn-installa-app-conferma').addEventListener('click', async () => {
+    closeModal('modal-installa-app');
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+    }
+    localStorage.setItem('pwa_install_dismesso_il', String(Date.now()));
+  });
+  document.getElementById('btn-installa-app-dopo').addEventListener('click', () => {
+    closeModal('modal-installa-app');
+    localStorage.setItem('pwa_install_dismesso_il', String(Date.now()));
+  });
+
+  function normalizzaTesto(str) {
+    return (str || '')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function formatEuro(n) { return '€' + Number(n).toFixed(2); }
+
+  function mostraSchermata(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ================= AVVIO =================
+  (async () => {
+    if (!TENANT_ID) {
+      showMsg('login-cliente-msg', 'Link non valido: manca il locale di riferimento.', 'error');
+      return;
+    }
+    await caricaImpostazioniLocale();
+
+    // Gestisce il link di ripristino password (Supabase reindirizza qui con un token nell'URL)
+    sbClient.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        mostraVista('vista-nuova-password');
+      }
+    });
+
+    // Se il dispositivo ricorda già una sessione valida, entra direttamente nel menu
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (session) {
+      const ok = await caricaOImpostaProfiloCliente(session.user);
+      if (ok) await entraNelMenu();
+    }
+  })();
+
+  async function caricaImpostazioniLocale() {
+    const { data: tenant } = await sbClient.from('tenants').select('nome').eq('id', TENANT_ID).maybeSingle();
+    const { data: imp } = await sbClient.from('impostazioni_locale').select('*').eq('tenant_id', TENANT_ID).maybeSingle();
+    impostazioni = imp || {};
+    const nomeLocale = (imp && imp.nome_locale) || (tenant && tenant.nome) || 'Il locale';
+
+    document.getElementById('iscrizione-nome-locale').textContent = nomeLocale;
+    document.getElementById('menu-nome-locale').textContent = nomeLocale;
+
+    if (imp && imp.sfondo_url) {
+      document.getElementById('iscrizione-hero').style.backgroundImage = `url('${imp.sfondo_url}')`;
+      // La stessa immagine di sfondo impostata in admin diventa lo sfondo di tutta l'app,
+      // al posto del colore pieno (--bg) usato finora. Ci mettiamo sopra un velo crema
+      // semi-trasparente per smorzarla: resta visibile ma i prodotti in primo piano
+      // risaltano di più, dando un effetto di profondità.
+      document.body.style.backgroundImage = `linear-gradient(rgba(247,238,203,0.78), rgba(247,238,203,0.78)), url('${imp.sfondo_url}')`;
+      document.body.style.backgroundSize = 'auto, auto';
+      document.body.style.backgroundPosition = 'top left, top left';
+      document.body.style.backgroundRepeat = 'no-repeat, repeat';
+    }
+    if (imp && imp.logo_url) {
+      const logo1 = document.getElementById('iscrizione-logo');
+      logo1.src = imp.logo_url; logo1.style.display = 'block';
+      const logo2 = document.getElementById('menu-logo');
+      logo2.src = imp.logo_url; logo2.style.display = 'block';
+      const logo3 = document.getElementById('home-logo');
+      logo3.src = imp.logo_url; logo3.style.display = 'block';
+    }
+
+    // Imposta l'altezza reale dell'header per posizionare correttamente le tab sotto di esso
+    requestAnimationFrame(() => {
+      const h = document.querySelector('header.menu-header').offsetHeight;
+      document.documentElement.style.setProperty('--header-h', h + 'px');
+    });
+  }
+
+  // ================= NAVIGAZIONE TRA LE VISTE DI ACCESSO =================
+  function mostraVista(id) {
+    ['vista-login', 'vista-registrazione', 'vista-recupera', 'vista-nuova-password'].forEach(v => {
+      document.getElementById(v).style.display = (v === id) ? 'block' : 'none';
+    });
+  }
+  document.getElementById('link-vai-registrazione').addEventListener('click', (e) => { e.preventDefault(); mostraVista('vista-registrazione'); });
+  document.getElementById('link-vai-login').addEventListener('click', (e) => { e.preventDefault(); mostraVista('vista-login'); });
+  document.getElementById('link-password-dimenticata').addEventListener('click', (e) => { e.preventDefault(); mostraVista('vista-recupera'); });
+  document.getElementById('link-torna-login').addEventListener('click', (e) => { e.preventDefault(); mostraVista('vista-login'); });
+
+  // ================= PROFILO CLIENTE (tabella clienti collegata a auth.users) =================
+  // Trova il profilo cliente per questo tenant; se non esiste (es. primo accesso dopo conferma email), lo crea usando i metadati salvati in fase di registrazione.
+  async function caricaOImpostaProfiloCliente(user) {
+    const { data: esistente, error: errSel } = await sbClient
+      .from('clienti').select('*')
+      .eq('tenant_id', TENANT_ID).eq('user_id', user.id)
+      .maybeSingle();
+
+    if (errSel) { showMsg('login-cliente-msg', 'Errore: ' + errSel.message, 'error'); return false; }
+
+    if (esistente) { clienteCorrente = esistente; return true; }
+
+    const meta = user.user_metadata || {};
+    const { data: nuovo, error: errIns } = await sbClient.from('clienti').insert({
+      tenant_id: TENANT_ID,
+      user_id: user.id,
+      nome: meta.nome || '',
+      cognome: meta.cognome || '',
+      telefono: meta.telefono || '',
+      indirizzo: meta.indirizzo || '',
+      email: user.email
+    }).select().single();
+
+    if (errIns) { showMsg('login-cliente-msg', 'Errore creazione profilo: ' + errIns.message, 'error'); return false; }
+    clienteCorrente = nuovo;
+    return true;
+  }
+
+  // ================= LOGIN =================
+  document.getElementById('form-login-cliente').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg('login-cliente-msg');
+    const btn = document.getElementById('btn-login-cliente');
+    btn.disabled = true; btn.textContent = 'Accesso...';
+
+    try {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+
+      const ok = await caricaOImpostaProfiloCliente(data.user);
+      if (ok) await entraNelMenu();
+    } catch (err) {
+      showMsg('login-cliente-msg', 'Accesso fallito: credenziali non valide.', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Accedi';
+    }
+  });
+
+  // ================= REGISTRAZIONE =================
+  document.getElementById('form-registrazione-cliente').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg('registrazione-msg');
+    const btn = document.getElementById('btn-registrati');
+    btn.disabled = true; btn.textContent = 'Registrazione...';
+
+    try {
+      const nome = document.getElementById('reg-nome').value.trim();
+      const cognome = document.getElementById('reg-cognome').value.trim();
+      const indirizzo = document.getElementById('reg-indirizzo').value.trim();
+      const telefono = document.getElementById('reg-telefono').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+
+      const redirectTo = window.location.origin + window.location.pathname + '?tenant=' + TENANT_ID;
+      const { data, error } = await sbClient.auth.signUp({
+        email, password,
+        options: { data: { nome, cognome, telefono, indirizzo }, emailRedirectTo: redirectTo }
+      });
+      if (error) throw error;
+
+      if (data.session) {
+        // Conferma email disattivata: sessione già attiva, entriamo subito
+        const ok = await caricaOImpostaProfiloCliente(data.user);
+        if (ok) await entraNelMenu();
+      } else {
+        showMsg('registrazione-msg', 'Registrazione completata!', 'ok');
+        openModal('modal-verifica-email');
+        mostraVista('vista-login');
+      }
+    } catch (err) {
+      showMsg('registrazione-msg', 'Errore: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Registrati';
+    }
+  });
+
+  // ================= RECUPERO PASSWORD =================
+  document.getElementById('form-recupera-password').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg('recupera-msg');
+    const btn = document.getElementById('btn-recupera-password');
+    btn.disabled = true; btn.textContent = 'Invio...';
+
+    try {
+      const email = document.getElementById('recupera-email').value.trim();
+      const redirectTo = window.location.origin + window.location.pathname + '?tenant=' + TENANT_ID;
+      const { error } = await sbClient.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw error;
+      showMsg('recupera-msg', 'Ti abbiamo inviato un\'email con il link per reimpostare la password.', 'ok');
+    } catch (err) {
+      showMsg('recupera-msg', 'Errore: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Invia link di ripristino';
+    }
+  });
+
+  // ================= NUOVA PASSWORD (dopo click sul link email) =================
+  document.getElementById('form-nuova-password').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg('nuova-password-msg');
+    const btn = document.getElementById('btn-nuova-password');
+    btn.disabled = true; btn.textContent = 'Salvataggio...';
+
+    try {
+      const nuovaPassword = document.getElementById('nuova-password-campo').value;
+      const { data, error } = await sbClient.auth.updateUser({ password: nuovaPassword });
+      if (error) throw error;
+      const ok = await caricaOImpostaProfiloCliente(data.user);
+      if (ok) await entraNelMenu();
+    } catch (err) {
+      showMsg('nuova-password-msg', 'Errore: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Salva nuova password';
+    }
+  });
+
+  // ================= ACCOUNT (Utente + I miei ordini) =================
+  function apriAccount() {
+    renderProfiloAccount();
+    mostraVistaAccount('profilo');
+    openModal('modal-account');
+  }
+  document.getElementById('btn-account').addEventListener('click', apriAccount);
+
+  document.querySelectorAll('.tab-account').forEach(btn => {
+    btn.addEventListener('click', () => {
+      mostraVistaAccount(btn.dataset.vista);
+    });
+  });
+
+  function mostraVistaAccount(vista) {
+    document.querySelectorAll('.tab-account').forEach(b => {
+      b.classList.toggle('active', b.dataset.vista === vista);
+      b.classList.toggle('secondary', b.dataset.vista !== vista);
+    });
+    document.getElementById('vista-account-profilo').style.display = vista === 'profilo' ? 'block' : 'none';
+    document.getElementById('vista-account-ordini').style.display = vista === 'ordini' ? 'block' : 'none';
+    if (vista === 'ordini') caricaOrdiniAccount();
+  }
+
+  let saldoPrepagatoCorrente = null;
+
+  function renderProfiloAccount() {
+    const c = clienteCorrente || {};
+    document.getElementById('account-profilo-dati').innerHTML = `
+      <div class="var-gruppo" style="margin-bottom:0;">
+        <div style="margin-bottom:10px;"><strong>${escapeHtml((c.nome || '') + ' ' + (c.cognome || ''))}</strong></div>
+        <div style="font-size:14px; color:var(--ink-dim); margin-top:8px;">📞 ${escapeHtml(c.telefono || '—')}</div>
+        <div style="font-size:14px; color:var(--ink-dim); margin-top:8px;">✉️ ${escapeHtml(c.email || '—')}</div>
+        <div style="font-size:14px; color:var(--ink-dim); margin-top:8px;">📍 ${escapeHtml(c.indirizzo || '—')}</div>
+      </div>
+
+      <div class="var-gruppo" id="blocco-prepagato" style="margin-top:14px;">
+        <div class="var-gruppo-titolo"><span>💳 Saldo prepagato</span></div>
+        <div id="prepagato-contenuto">Verifica in corso...</div>
+      </div>
+    `;
+    caricaSaldoPrepagato();
+  }
+
+  async function caricaSaldoPrepagato() {
+    const cont = document.getElementById('prepagato-contenuto');
+    try {
+      const { data, error } = await sbClient.rpc('leggi_saldo_prepagato');
+      if (error) throw error;
+
+      if (data === null || data === undefined) {
+        // Nessuna tessera collegata: prova prima l'auto-collegamento per email, poi offri l'inserimento manuale
+        const auto = await sbClient.rpc('auto_collega_tessera_per_email');
+        if (!auto.error && auto.data !== null && auto.data !== undefined) {
+          saldoPrepagatoCorrente = Number(auto.data);
+          cont.innerHTML = `<div style="font-size:22px; font-weight:700; color:var(--accent);">${formatEuro(saldoPrepagatoCorrente)}</div>`;
+          aggiornaBadgeSaldoHeader();
+          return;
+        }
+        cont.innerHTML = `
+          <p style="font-size:13px; color:var(--ink-dim); margin:6px 0 10px;">Hai una tessera prepagata in negozio? Chiedi al personale di inserire il codice per collegarla.</p>
+          <div class="row-2">
+            <input type="text" id="campo-codice-tessera" placeholder="Codice tessera (es. 210)">
+            <input type="password" id="campo-password-tessera" placeholder="Password personale">
+          </div>
+          <button type="button" id="btn-collega-tessera" style="width:100%; margin-top:8px;">Collega</button>
+          <div class="msg" id="tessera-msg"></div>
+        `;
+        document.getElementById('btn-collega-tessera').addEventListener('click', collegaTessera);
+      } else {
+        saldoPrepagatoCorrente = Number(data);
+        cont.innerHTML = `<div style="font-size:22px; font-weight:700; color:var(--accent);">${formatEuro(saldoPrepagatoCorrente)}</div>`;
+      }
+    } catch (err) {
+      cont.innerHTML = '<div class="empty-state">Impossibile verificare il saldo al momento.</div>';
+    }
+  }
+
+  async function collegaTessera() {
+    const codice = document.getElementById('campo-codice-tessera').value.trim();
+    const password = document.getElementById('campo-password-tessera').value;
+    const msgEl = document.getElementById('tessera-msg');
+    msgEl.className = 'msg';
+
+    if (!codice) return;
+    if (password !== 'tds12345') {
+      msgEl.textContent = 'Password errata. Il collegamento della tessera va autorizzato dal personale.';
+      msgEl.className = 'msg show error';
+      return;
+    }
+
+    try {
+      const { data, error } = await sbClient.rpc('collega_tessera_prepagata', { codice_input: codice });
+      if (error) throw error;
+      saldoPrepagatoCorrente = Number(data);
+      document.getElementById('prepagato-contenuto').innerHTML =
+        `<div style="font-size:22px; font-weight:700; color:var(--accent);">${formatEuro(saldoPrepagatoCorrente)}</div>`;
+      aggiornaBadgeSaldoHeader();
+    } catch (err) {
+      msgEl.textContent = 'Codice non valido: ' + err.message;
+      msgEl.className = 'msg show error';
+    }
+  }
+
+  async function caricaOrdiniAccount() {
+    const cont = document.getElementById('account-lista-ordini');
+    cont.innerHTML = '<div class="empty-state">Caricamento...</div>';
+
+    const { data, error } = await sbClient
+      .from('ordini')
+      .select('*, ordini_righe(*)')
+      .eq('cliente_id', clienteCorrente.id)
+      .order('data_ritiro', { ascending: false })
+      .order('ora_ritiro', { ascending: false });
+
+    if (error) { cont.innerHTML = '<div class="empty-state">Errore nel caricamento degli ordini.</div>'; return; }
+    if (!data || !data.length) { cont.innerHTML = '<div class="empty-state">Nessun ordine ancora effettuato.</div>'; return; }
+
+    cont.innerHTML = data.map(o => {
+      const dataFormattata = new Date(o.data_ritiro + 'T' + o.ora_ritiro).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const righe = (o.ordini_righe || []).map(r => `
+        <div style="font-size:13px; color:var(--ink-dim); margin-top:4px;">
+          ${r.quantita}× ${escapeHtml(r.prodotto_nome)}
+        </div>
+      `).join('');
+      return `
+        <div class="var-gruppo">
+          <div class="var-gruppo-titolo">
+            <span>${dataFormattata} — ${o.ora_ritiro.slice(0,5)}</span>
+            <span class="hint">${formatEuro(o.totale)}</span>
+          </div>
+          ${righe}
+          <div style="margin-top:8px;"><span class="badge">${escapeHtml(o.stato)}</span></div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  document.getElementById('btn-logout-account').addEventListener('click', async () => {
+    if (!confirm('Vuoi davvero uscire dal tuo account?')) return;
+    await sbClient.auth.signOut();
+    closeModal('modal-account');
+    clienteCorrente = null;
+    mostraSchermata('schermata-iscrizione');
+    mostraVista('vista-login');
+  });
+
+  async function aggiornaBadgeSaldoHeader() {
+    const badge = document.getElementById('badge-saldo-header');
+    try {
+      const { data, error } = await sbClient.rpc('leggi_saldo_prepagato');
+      if (error || data === null || data === undefined) { badge.style.display = 'none'; return; }
+      saldoPrepagatoCorrente = Number(data);
+      badge.textContent = '💳 ' + formatEuro(saldoPrepagatoCorrente);
+      badge.style.display = 'block';
+    } catch (e) {
+      badge.style.display = 'none';
+    }
+  }
+
+  // ================= MENU =================
+  async function entraNelMenu() {
+    await caricaMenu();
+    ripristinaCarrelloLocale();
+    aggiornaFabCarrello();
+    mostraSchermata('schermata-home');
+    aggiornaBadgeSaldoHeader();
+    mostraNotificaGestoreSeAttiva();
+    menuGiaVisibile = true;
+    setTimeout(provaProponiInstallazione, 2500);
+    inizializzaCaroselloHome();
+  }
+
+  function apriSchermataOrdina() {
+    mostraSchermata('schermata-menu');
+
+    // Header e barra categorie sono "fixed" (fuori dal flusso normale). Solo ora che la
+    // schermata menu è finalmente visibile (prima era display:none, quindi "alta 0px" per
+    // il browser) possiamo ricalcolare per davvero le altezze: prima l'header (da cui
+    // dipende la posizione della barra categorie sotto di esso), poi lo spazio totale da
+    // lasciare come margine al contenuto.
+    requestAnimationFrame(() => {
+      const header = document.querySelector('header.menu-header');
+      const hHeader = header ? header.offsetHeight : 90;
+      document.documentElement.style.setProperty('--header-h', hHeader + 'px');
+
+      requestAnimationFrame(() => {
+        const nav = document.querySelector('nav.categorie-tabs');
+        const totale = hHeader + (nav ? nav.offsetHeight : 0);
+        document.documentElement.style.setProperty('--contenuto-top', (totale + 10) + 'px');
+      });
+    });
+  }
+
+  // ================= HOME / CHI SIAMO / CONTATTI =================
+
+  // ===== PERSONALIZZAZIONE DEL LOCALE =====
+  // Foto del carosello in home (es. ['/home/1.jpg', '/home/2.jpg']): se vuoto il carosello non compare.
+  const IMMAGINI_CAROSELLO_HOME = [];
+  // Foto della galleria "Chi siamo" (es. ['/chi-siamo/1.jpg']).
+  const IMMAGINI_GALLERIA_CHI_SIAMO = [];
+  // Testo "Chi siamo" del locale: se vuoto il riquadro "Chi siamo" non compare.
+  const TESTO_CHI_SIAMO = ``;
+
+  let caroselloHomeInizializzato = false;
+  function inizializzaCaroselloHome() {
+    if (caroselloHomeInizializzato) return;
+    caroselloHomeInizializzato = true;
+    if (!IMMAGINI_CAROSELLO_HOME.length) { document.getElementById('home-carosello-wrap').style.display = 'none'; return; }
+
+    const track = document.getElementById('home-carosello');
+    const dots = document.getElementById('home-carosello-dots');
+    track.innerHTML = IMMAGINI_CAROSELLO_HOME.map((src, i) => `<img src="${src}" alt="" loading="${i === 0 ? 'eager' : 'lazy'}">`).join('');
+    dots.innerHTML = IMMAGINI_CAROSELLO_HOME.map((_, i) => `<span class="${i === 0 ? 'active' : ''}"></span>`).join('');
+
+    let scrollTicking = false;
+    track.addEventListener('scroll', () => {
+      if (scrollTicking) return;
+      scrollTicking = true;
+      requestAnimationFrame(() => {
+        const indice = Math.round(track.scrollLeft / track.clientWidth);
+        dots.querySelectorAll('span').forEach((d, i) => d.classList.toggle('active', i === indice));
+        scrollTicking = false;
+      });
+    });
+
+    // Scorrimento automatico ogni 4 secondi; si ferma se il cliente non è più sulla home.
+    setInterval(() => {
+      if (!document.getElementById('schermata-home').classList.contains('active')) return;
+      const prossimo = (Math.round(track.scrollLeft / track.clientWidth) + 1) % IMMAGINI_CAROSELLO_HOME.length;
+      track.scrollTo({ left: prossimo * track.clientWidth, behavior: 'smooth' });
+    }, 4000);
+  }
+
+  let chiSiamoInizializzato = false;
+  function apriChiSiamo() {
+    mostraSchermata('schermata-chi-siamo');
+    if (chiSiamoInizializzato) return;
+    chiSiamoInizializzato = true;
+    document.getElementById('chi-siamo-testo').textContent = TESTO_CHI_SIAMO;
+    document.getElementById('chi-siamo-galleria').innerHTML = IMMAGINI_GALLERIA_CHI_SIAMO
+      .map(src => `<img src="${src}" alt="" loading="lazy" onclick="ingrandisciFoto('${src}')">`).join('');
+  }
+  window.ingrandisciFoto = function(src) {
+    document.getElementById('foto-ingrandita-img').src = src;
+    openModal('modal-foto-ingrandita');
+  };
+
+  function apriContatti() {
+    mostraSchermata('schermata-contatti');
+    const cont = document.getElementById('contatti-contenuto');
+    if (!impostazioni) { cont.innerHTML = '<div class="empty-state">Informazioni non disponibili.</div>'; return; }
+
+    const via = impostazioni.indirizzo || '';
+    const capCitta = [impostazioni.cap, impostazioni.citta].filter(Boolean).join(' ');
+    const indirizzoCompleto = [via, capCitta].filter(Boolean).join(', ');
+
+    let mappaHtml = '';
+    if (indirizzoCompleto) {
+      const query = encodeURIComponent(indirizzoCompleto);
+      const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + query;
+      const embedUrl = 'https://maps.google.com/maps?q=' + query + '&z=15&output=embed';
+      mappaHtml = `
+        <a href="${mapsUrl}" target="_blank" rel="noopener" class="contatti-mappa-link" aria-label="Apri in Google Maps">
+          <iframe class="contatti-mappa" src="${embedUrl}" loading="lazy" style="pointer-events:none;"></iframe>
+          <div class="contatti-mappa-overlay">📍 Tocca per aprire la mappa</div>
+        </a>
+        <a href="${mapsUrl}" target="_blank" rel="noopener" class="contatti-btn-azione">🧭 Vai a Maps</a>
+      `;
+    }
+
+    const righe = [];
+    if (indirizzoCompleto) {
+      righe.push(`<div class="contatti-riga"><span class="icona">📍</span><div>${escapeHtml(indirizzoCompleto)}</div></div>`);
+    }
+    if (impostazioni.telefono) {
+      righe.push(`<div class="contatti-riga"><span class="icona">📞</span><div>${escapeHtml(impostazioni.telefono)}</div></div>`);
+    }
+    if (impostazioni.sito_web) {
+      const url = impostazioni.sito_web.startsWith('http') ? impostazioni.sito_web : 'https://' + impostazioni.sito_web;
+      righe.push(`<div class="contatti-riga"><span class="icona">🌐</span><div><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(impostazioni.sito_web)}</a></div></div>`);
+    }
+
+    const bottoneChiama = impostazioni.telefono
+      ? `<a href="tel:${escapeHtml(impostazioni.telefono.replace(/\s+/g, ''))}" class="contatti-btn-azione contatti-btn-chiama">📞 Contattaci</a>`
+      : '';
+
+    cont.innerHTML = mappaHtml + (righe.length ? righe.join('') : '<div class="empty-state">Nessuna informazione di contatto disponibile.</div>') + bottoneChiama;
+  }
+
+  // "Scarica il menu": genera una versione stampabile del menu completo (categorie e
+  // prodotti attuali) e apre la finestra di stampa del browser — da lì il cliente può
+  // scegliere "Salva come PDF" senza bisogno di un file pre-fatto da mantenere aggiornato.
+  function scaricaMenuPdf() {
+    const nomeLocale = (impostazioni && impostazioni.nome_locale) || document.getElementById('menu-nome-locale').textContent || 'Menu';
+
+    const categorieById = {};
+    categorieList.forEach(c => { categorieById[c.id] = c; });
+
+    // Riga di UN prodotto per la stampa: nome, prezzo, descrizione (se c'è) e immagine
+    // (se c'è) — stessi dati e stessa "voce grafica" (colori/font categoria) del sito.
+    function prodottoStampaHtml(p, stileNomeProdotto) {
+      return `
+        <div class="stampa-prodotto">
+          ${p.immagine_url ? `<img src="${p.immagine_url}" class="stampa-prodotto-img">` : ''}
+          <div class="stampa-prodotto-info">
+            <div class="stampa-prodotto-riga">
+              <span class="stampa-prodotto-nome" style="${stileNomeProdotto}">${escapeHtml(p.nome)}</span>
+              <span class="stampa-puntini"></span>
+              <span class="stampa-prodotto-prezzo">${formatEuro(p.prezzo_base)}</span>
+            </div>
+            ${p.descrizione ? `<div class="stampa-prodotto-desc">${escapeHtml(p.descrizione)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // Blocco prodotti di UNA categoria (padre o figlia collegata), con i suoi colori propri
+    // — identica logica di renderBloccoProdotti usata a schermo, adattata alla stampa.
+    function bloccoStampa(g, eSottocategoria) {
+      const prodottiG = prodottiList.filter(p => p.categoria_id === g.id);
+      if (!prodottiG.length) return '';
+      const stileSezione = g.colore_sfondo_sezione ? `background-color:${g.colore_sfondo_sezione};` : '';
+      const stileTitolo = stileTitoloCategoria(g);
+      const stileNomeProdotto = g.colore_testo_prodotto ? `color:${g.colore_testo_prodotto};` : '';
+      const righe = prodottiG.map(p => prodottoStampaHtml(p, stileNomeProdotto)).join('');
+      if (eSottocategoria) {
+        return `<div class="stampa-sottocategoria" style="${stileSezione}"><h3 style="${stileTitolo}">${escapeHtml(g.nome)}</h3>${righe}</div>`;
+      }
+      return `<div style="${stileSezione}">${righe}</div>`;
+    }
+
+    const sezioni = categorieTopLevel.map(cat => {
+      const idFiglie = figlieDiCategoria[cat.id] || [];
+      const bloccoPadre = bloccoStampa(cat, false);
+      const blocchiFiglie = idFiglie.map(id => categorieById[id]).filter(Boolean)
+        .map(g => bloccoStampa(g, true)).join('');
+      if (!bloccoPadre.trim() && !blocchiFiglie.trim()) return '';
+
+      const stileSezionePadre = cat.colore_sfondo_sezione ? `background-color:${cat.colore_sfondo_sezione};` : '';
+      const stileTitoloPadre = stileTitoloCategoria(cat);
+      return `
+        <div class="stampa-categoria" style="${stileSezionePadre}">
+          <h2 style="${stileTitoloPadre}">${escapeHtml(cat.nome)}</h2>
+          ${bloccoPadre}
+          ${blocchiFiglie}
+        </div>
+      `;
+    }).join('');
+
+    const cont = document.getElementById('stampa-menu-contenuto');
+    cont.innerHTML = `
+      ${impostazioni && impostazioni.logo_url ? `<img class="stampa-logo" src="${impostazioni.logo_url}">` : `<h1>${escapeHtml(nomeLocale)}</h1>`}
+      ${sezioni}
+    `;
+    document.body.classList.add('stampa-menu-attiva');
+    window.print();
+    setTimeout(() => document.body.classList.remove('stampa-menu-attiva'), 500);
+  }
+
+  document.getElementById('tile-chi-siamo').addEventListener('click', apriChiSiamo);
+  if (!TESTO_CHI_SIAMO.trim() && !IMMAGINI_GALLERIA_CHI_SIAMO.length) document.getElementById('tile-chi-siamo').style.display = 'none';
+  document.getElementById('tile-ordina').addEventListener('click', apriSchermataOrdina);
+  document.getElementById('tile-area-personale').addEventListener('click', apriAccount);
+  document.getElementById('tile-scarica-menu').addEventListener('click', scaricaMenuPdf);
+  document.getElementById('tile-contatti').addEventListener('click', apriContatti);
+  document.getElementById('btn-account-home').addEventListener('click', apriAccount);
+  document.getElementById('btn-carrello-home').addEventListener('click', apriModalCarrello);
+
+  function mostraNotificaGestoreSeAttiva() {
+    if (!impostazioni || !impostazioni.notifica_attiva) return;
+    const haTitolo = (impostazioni.notifica_titolo || '').trim();
+    const haTesto = (impostazioni.notifica_testo || '').trim();
+    const haImmagine = (impostazioni.notifica_immagine_url || '').trim();
+    if (!haTitolo && !haTesto && !haImmagine) return; // notifica attiva ma vuota: non mostrare nulla
+
+    document.getElementById('notifica-titolo').textContent = haTitolo;
+    document.getElementById('notifica-testo').textContent = haTesto;
+    const img = document.getElementById('notifica-immagine');
+    if (haImmagine) { img.src = haImmagine; img.style.display = 'block'; }
+    else { img.style.display = 'none'; }
+
+    openModal('modal-notifica');
+  }
+
+  async function caricaMenu() {
+    const { data: categorie } = await sbClient
+      .from('categorie').select('*')
+      .eq('tenant_id', TENANT_ID).eq('attivo', true)
+      .order('ordine_visualizzazione');
+    categorieList = categorie || [];
+
+    // Le categorie "collegate" ad un'altra non compaiono da sole sulla barra: i loro
+    // prodotti finiscono uniti dentro il blocco della categoria a cui sono collegate.
+    categorieTopLevel = categorieList.filter(c => !c.categoria_collegata_id);
+    figlieDiCategoria = {};
+    categorieList.forEach(c => {
+      if (c.categoria_collegata_id) {
+        if (!figlieDiCategoria[c.categoria_collegata_id]) figlieDiCategoria[c.categoria_collegata_id] = [];
+        figlieDiCategoria[c.categoria_collegata_id].push(c.id);
+      }
+    });
+
+    const { data: allergeni } = await sbClient
+      .from('allergeni').select('*')
+      .eq('tenant_id', TENANT_ID)
+      .order('ordine_visualizzazione');
+    allergeniList = allergeni || [];
+
+    const { data: prodotti, error: erroreProdotti } = await sbClient
+      .from('prodotti').select('*, prodotti_opzioni_variazione(opzione_variazione_id, opzioni_variazione(id, nome, prezzo_aggiuntivo, variazione_id, prodotto_riferimento_id, prodotto_riferimento:prodotto_riferimento_id(id, nome, descrizione, prezzo_base, immagine_url, attivo), variazioni(id, nome_gruppo, obbligatorio, max_scelte, tipo, ordine_visualizzazione, post_aggiunta_carrello, abilita_quantita, suggerisce_prodotti))), prodotti_allergeni(allergene_id, allergeni(id, nome, icona))')
+      .eq('tenant_id', TENANT_ID).eq('attivo', true)
+      .order('ordine_visualizzazione');
+    if (erroreProdotti) {
+      // Es. colonna mancante nel database (migrazione SQL non eseguita): lo segnaliamo
+      // in chiaro invece di lasciare il menu silenziosamente vuoto o incompleto.
+      console.error('Errore caricando i prodotti:', erroreProdotti);
+      alert('Errore caricando il menu: ' + erroreProdotti.message);
+    }
+    prodottiList = prodotti || [];
+
+    // Organizza variazioni per prodotto, raggruppate per gruppo variazione.
+    // I gruppi con post_aggiunta_carrello finiscono in un elenco separato: non si scelgono
+    // nella pagina prodotto, ma vengono proposti subito DOPO aver premuto "Aggiungi al carrello".
+    variazioniPerProdotto = {};
+    gruppiPostCarrelloPerProdotto = {};
+    prodottiList.forEach(p => {
+      const gruppiMap = {};
+      (p.prodotti_opzioni_variazione || []).forEach(pv => {
+        const opz = pv.opzioni_variazione;
+        if (!opz || !opz.variazioni) return;
+        const g = opz.variazioni;
+        // Per i gruppi "suggerisce prodotti", scartiamo le opzioni il cui prodotto
+        // collegato non esiste più o è stato disattivato nel frattempo.
+        if (g.suggerisce_prodotti && (!opz.prodotto_riferimento || opz.prodotto_riferimento.attivo === false)) return;
+        if (!gruppiMap[g.id]) gruppiMap[g.id] = { gruppo: g, opzioni: [] };
+        gruppiMap[g.id].opzioni.push({ id: opz.id, nome: opz.nome, prezzo_aggiuntivo: opz.prezzo_aggiuntivo, prodottoRiferimento: opz.prodotto_riferimento || null });
+      });
+      const tuttiGruppi = Object.values(gruppiMap);
+      tuttiGruppi.sort((a, b) => (a.gruppo.ordine_visualizzazione || 0) - (b.gruppo.ordine_visualizzazione || 0));
+      tuttiGruppi.forEach(g => g.opzioni.sort((a, b) => a.nome.localeCompare(b.nome, 'it')));
+      variazioniPerProdotto[p.id] = tuttiGruppi.filter(g => !g.gruppo.post_aggiunta_carrello);
+      gruppiPostCarrelloPerProdotto[p.id] = tuttiGruppi.filter(g => g.gruppo.post_aggiunta_carrello);
+    });
+
+    renderTabsCategorie();
+    renderMenu();
+  }
+
+  let bloccoScrollSpy = false;
+
+  function renderTabsCategorie() {
+    const nav = document.getElementById('categorie-tabs');
+    nav.innerHTML = categorieTopLevel.map((c, i) => `
+      <button class="tab-categoria ${i === 0 ? 'active' : ''}" data-cat="${c.id}">${escapeHtml(c.nome)}</button>
+    `).join('');
+    nav.querySelectorAll('.tab-categoria').forEach(btn => {
+      btn.addEventListener('click', () => {
+        nav.querySelectorAll('.tab-categoria').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        bloccoScrollSpy = true;
+        const el = document.getElementById('cat-' + btn.dataset.cat);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Sblocchiamo lo scrollspy solo a scroll fluido davvero concluso ('scrollend', dove
+        // supportato), con un timeout più lungo come rete di sicurezza altrove: se una
+        // categoria è lontana lo scroll smooth può durare più di qualche centinaio di ms,
+        // e riprendere il controllo troppo presto sovrascriveva la tab appena scelta con
+        // quella "di passaggio" durante l'animazione.
+        let sbloccato = false;
+        const sblocca = () => {
+          if (sbloccato) return;
+          sbloccato = true;
+          bloccoScrollSpy = false;
+          window.removeEventListener('scrollend', sblocca);
+        };
+        window.addEventListener('scrollend', sblocca, { once: true });
+        setTimeout(sblocca, 1500);
+      });
+    });
+  }
+
+  function aggiornaCategoriaAttivaSuScroll() {
+    if (bloccoScrollSpy) return;
+    if (!document.getElementById('schermata-menu').classList.contains('active')) return;
+
+    const nav = document.getElementById('categorie-tabs');
+    const sogliaAlto = nav.getBoundingClientRect().bottom + 4;
+
+    let categoriaCorrenteId = null;
+    document.querySelectorAll('.categoria-blocco').forEach(blocco => {
+      if (blocco.getBoundingClientRect().top <= sogliaAlto) {
+        categoriaCorrenteId = blocco.id.replace('cat-', '');
+      }
+    });
+    if (!categoriaCorrenteId) return;
+
+    const tabGiaAttiva = nav.querySelector('.tab-categoria.active');
+    if (tabGiaAttiva && tabGiaAttiva.dataset.cat === categoriaCorrenteId) return;
+
+    nav.querySelectorAll('.tab-categoria').forEach(b => b.classList.toggle('active', b.dataset.cat === categoriaCorrenteId));
+    const tabAttiva = nav.querySelector(`.tab-categoria[data-cat="${categoriaCorrenteId}"]`);
+    if (tabAttiva) tabAttiva.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }
+
+  let scrollSpyTicking = false;
+  window.addEventListener('scroll', () => {
+    if (scrollSpyTicking) return;
+    scrollSpyTicking = true;
+    requestAnimationFrame(() => {
+      aggiornaCategoriaAttivaSuScroll();
+      scrollSpyTicking = false;
+    });
+  });
+
+  // Costruisce lo stile inline del titolo di una categoria/sottocategoria:
+  // colore testo, grassetto, grandezza font, allineamento, font-family.
+  // Condivisa tra il rendering del menu a schermo e la versione stampabile.
+  function stileTitoloCategoria(g) {
+    return [
+      g.colore_testo_categoria ? `color:${g.colore_testo_categoria};` : '',
+      g.grassetto_titolo_categoria ? 'font-weight:700;' : '',
+      g.dimensione_titolo_categoria ? `font-size:${g.dimensione_titolo_categoria}px;` : '',
+      g.allineamento_titolo_categoria ? `text-align:${g.allineamento_titolo_categoria};` : '',
+      g.font_titolo_categoria ? `font-family:${g.font_titolo_categoria};` : ''
+    ].join('');
+  }
+
+  function renderMenu() {
+    const main = document.getElementById('menu-main');
+    if (!categorieTopLevel.length) {
+      main.innerHTML = '<div class="empty-state">Il menu non è ancora disponibile.</div>';
+      return;
+    }
+
+    const categorieById = {};
+    categorieList.forEach(c => { categorieById[c.id] = c; });
+
+    // Vero se il prodotto contiene almeno uno degli allergeni che il cliente ha scelto
+    // di evitare: in quel caso non compare affatto nel menu.
+    function prodottoDaNascondere(p) {
+      if (!allergeniSelezionatiFiltro.size) return false;
+      return (p.prodotti_allergeni || []).some(pa => allergeniSelezionatiFiltro.has(pa.allergene_id));
+    }
+
+    // Renderizza i prodotti di UNA categoria (padre o figlia), con i SUOI colori propri.
+    // Se e' una sottocategoria (idDiversoDalPadre = true) mostra anche il suo titolo.
+    function renderBloccoProdotti(g, eSottocategoria) {
+      const prodottiG = prodottiList.filter(p => p.categoria_id === g.id && !prodottoDaNascondere(p));
+      if (!prodottiG.length) return '';
+
+      const stileSezione = g.colore_sfondo_sezione ? `background-color:${g.colore_sfondo_sezione};` : '';
+      const stileTitolo = stileTitoloCategoria(g);
+      const stileProdotto = g.colore_sfondo_prodotto ? `background-color:${g.colore_sfondo_prodotto};` : '';
+      const stileNomeProdotto = [
+        g.colore_testo_prodotto ? `color:${g.colore_testo_prodotto};` : '',
+        g.grassetto_nome_prodotto === false ? 'font-weight:400;' : ''
+      ].join('');
+
+      const prodottiHtml = prodottiG.map(p => {
+        const stileBottone = [
+          p.colore_sfondo_bottone ? `background-color:${p.colore_sfondo_bottone};` : '',
+          p.colore_sfondo_bottone ? `border-color:${p.colore_sfondo_bottone};` : '',
+          p.colore_testo_bottone ? `color:${p.colore_testo_bottone};` : ''
+        ].join('');
+        const iconeAllergeni = (p.prodotti_allergeni || [])
+          .map(pa => pa.allergeni ? `<span title="${escapeHtml(pa.allergeni.nome)}">${escapeHtml(pa.allergeni.icona)}</span>` : '')
+          .join('');
+        return `
+        <div class="prodotto-card" style="${stileProdotto}" data-prodotto-id="${p.id}">
+          <span class="badge-qty-prodotto" data-badge-prodotto="${p.id}">0</span>
+          ${p.immagine_url ? `<img src="${p.immagine_url}" alt="">` : ''}
+          <div class="prodotto-info">
+            ${p.novita ? `<div class="badge-novita">🆕 Nuovo arrivo</div>` : ''}
+            <div class="prodotto-nome" style="${stileNomeProdotto}">${escapeHtml(p.nome)}</div>
+            ${p.descrizione ? `<div class="prodotto-desc">${escapeHtml(p.descrizione)}</div>` : ''}
+            ${iconeAllergeni ? `<div class="prodotto-allergeni">${iconeAllergeni}</div>` : ''}
+            <div class="prodotto-prezzo">${formatEuro(p.prezzo_base)}</div>
+          </div>
+          <button class="btn-aggiungi" style="${stileBottone}" onclick="apriDettaglioProdotto('${p.id}')">+ Aggiungi</button>
+        </div>
+      `;
+      }).join('');
+
+      if (eSottocategoria) {
+        return `
+          <div class="sottocategoria-blocco" style="${stileSezione}">
+            <div class="sottocategoria-titolo" style="${stileTitolo}">${escapeHtml(g.nome)}</div>
+            ${g.descrizione ? `<div class="categoria-desc">${escapeHtml(g.descrizione)}</div>` : ''}
+            ${prodottiHtml}
+          </div>
+        `;
+      }
+      // Prodotti diretti della categoria padre: nessun titolo ripetuto (c'e' gia' il titolo della sezione).
+      return `<div style="${stileSezione}">${prodottiHtml}</div>`;
+    }
+
+    const bloccoCategorieHtml = categorieTopLevel.map(cat => {
+      const idFiglie = figlieDiCategoria[cat.id] || [];
+      const bloccoPadre = renderBloccoProdotti(cat, false);
+      const blocchiFiglie = idFiglie.map(id => categorieById[id]).filter(Boolean)
+        .map(g => renderBloccoProdotti(g, true)).join('');
+
+      if (!bloccoPadre.trim() && !blocchiFiglie.trim()) return '';
+
+      const stileSezionePadre = cat.colore_sfondo_sezione ? `background-color:${cat.colore_sfondo_sezione};` : '';
+      const stileTitoloPadre = stileTitoloCategoria(cat);
+
+      return `
+        <div class="categoria-blocco" id="cat-${cat.id}" style="${stileSezionePadre}">
+          <div class="categoria-titolo" style="${stileTitoloPadre}">${escapeHtml(cat.nome)}</div>
+          ${cat.descrizione ? `<div class="categoria-desc">${escapeHtml(cat.descrizione)}</div>` : ''}
+          ${bloccoPadre}
+          ${blocchiFiglie}
+        </div>
+      `;
+    }).join('');
+
+    main.innerHTML = renderBarraFiltroAllergeni() + bloccoCategorieHtml + renderFooterLocale();
+  }
+
+  // Barra in cima al menu per aprire il filtro allergeni, più un avviso ben visibile
+  // (con pulsante per rimuoverlo subito) quando un filtro è già attivo.
+  function renderBarraFiltroAllergeni() {
+    if (!allergeniList.length) return '';
+    const numAttivi = allergeniSelezionatiFiltro.size;
+    let html = `
+      <div class="filtro-allergeni-barra" onclick="apriFiltroAllergeni()" style="cursor:pointer;">
+        <span>⚠️ Filtra per allergeni${numAttivi ? `<span class="conteggio">${numAttivi}</span>` : ''}</span>
+        <span style="color:var(--ink-dim); font-weight:400;">›</span>
+      </div>
+    `;
+    if (numAttivi) {
+      const nomi = allergeniList.filter(a => allergeniSelezionatiFiltro.has(a.id)).map(a => `${a.icona} ${escapeHtml(a.nome)}`).join(', ');
+      html += `
+        <div class="filtro-allergeni-avviso">
+          <span>Nascosti i piatti con: ${nomi}</span>
+          <button type="button" class="secondary" onclick="azzeraFiltroAllergeni()">Rimuovi</button>
+        </div>
+      `;
+    }
+    return html;
+  }
+
+  window.apriFiltroAllergeni = function() {
+    const cont = document.getElementById('lista-allergeni-filtro');
+    cont.innerHTML = allergeniList.map(a => `
+      <label>
+        <input type="checkbox" class="chk-filtro-allergene" value="${a.id}" ${allergeniSelezionatiFiltro.has(a.id) ? 'checked' : ''}>
+        <span class="icona">${escapeHtml(a.icona)}</span> ${escapeHtml(a.nome)}
+      </label>
+    `).join('');
+    cont.querySelectorAll('.chk-filtro-allergene').forEach(chk => {
+      chk.addEventListener('change', () => {
+        if (chk.checked) allergeniSelezionatiFiltro.add(chk.value);
+        else allergeniSelezionatiFiltro.delete(chk.value);
+        renderMenu();
+      });
+    });
+    openModal('modal-filtro-allergeni');
+  };
+
+  window.azzeraFiltroAllergeni = function() {
+    allergeniSelezionatiFiltro.clear();
+    renderMenu();
+  };
+
+  document.getElementById('btn-azzera-filtro-allergeni').addEventListener('click', () => {
+    allergeniSelezionatiFiltro.clear();
+    document.querySelectorAll('.chk-filtro-allergene').forEach(chk => { chk.checked = false; });
+    renderMenu();
+  });
+
+  function renderFooterLocale() {
+    if (!impostazioni) return '';
+    const nome = impostazioni.nome_locale || document.getElementById('menu-nome-locale').textContent;
+    const via = impostazioni.indirizzo || '';
+    const capCitta = [impostazioni.cap, impostazioni.citta].filter(Boolean).join(' ');
+    const indirizzoCompleto = [via, capCitta].filter(Boolean).join(' — ');
+    const righe = [];
+    if (indirizzoCompleto) righe.push(`<div class="footer-riga">📍 ${escapeHtml(indirizzoCompleto)}</div>`);
+    if (impostazioni.telefono) righe.push(`<div class="footer-riga">📞 ${escapeHtml(impostazioni.telefono)}</div>`);
+    if (impostazioni.sito_web) righe.push(`<div class="footer-riga">🌐 ${escapeHtml(impostazioni.sito_web)}</div>`);
+    if (!righe.length) return '';
+    return `
+      <div class="footer-locale">
+        <div class="footer-nome">${escapeHtml(nome)}</div>
+        ${righe.join('')}
+      </div>
+    `;
+  }
+
+  // ================= DETTAGLIO PRODOTTO / VARIAZIONI =================
+
+  // Genera il markup di UN gruppo variazione: se il gruppo ha "abilita_quantita" usa un
+  // selettore numerico per opzione, altrimenti la classica checkbox/radio. Usata sia nel
+  // modal dettaglio prodotto sia nel popup "Hai bisogno anche", cosi' il comportamento
+  // (incluso la quantita') e' identico ovunque un gruppo venga proposto.
+  // Gruppo "suggerisce prodotti": mostra prodotti veri del catalogo (foto, descrizione,
+  // prezzo) invece di semplici opzioni testuali. Usa lo stesso meccanismo di
+  // checkbox/quantità sotto il cofano, così il resto del codice (lettura selezioni,
+  // validazione) funziona senza bisogno di percorsi separati.
+  function renderGruppoProdottiSuggeritiHtml(g) {
+    const isQty = !!g.gruppo.abilita_quantita;
+    return `
+      <div class="var-gruppo">
+        <div class="var-gruppo-titolo">
+          <span>🍹 ${escapeHtml(g.gruppo.nome_gruppo)}</span>
+        </div>
+        ${g.opzioni.map(o => {
+          const prod = o.prodottoRiferimento;
+          const nome = prod ? prod.nome : o.nome;
+          const prezzo = prod ? Number(prod.prezzo_base) : (Number(o.prezzo_aggiuntivo) || 0);
+          const immagine = prod ? prod.immagine_url : '';
+          const descrizione = prod ? prod.descrizione : '';
+          return `
+            <div class="suggerito-prodotto-riga" data-gruppo-riga="${g.gruppo.id}" data-nome-normalizzato="${escapeHtml(normalizzaTesto(nome))}">
+              ${immagine ? `<img src="${immagine}" class="suggerito-prodotto-img" alt="">` : `<div class="suggerito-prodotto-img suggerito-prodotto-img-vuota"></div>`}
+              <div class="suggerito-prodotto-info">
+                <div class="suggerito-prodotto-nome">${escapeHtml(nome)}</div>
+                ${descrizione ? `<div class="suggerito-prodotto-desc">${escapeHtml(descrizione)}</div>` : ''}
+                <div class="suggerito-prodotto-prezzo">${formatEuro(prezzo)}</div>
+              </div>
+              ${isQty ? `
+                <div class="carrello-riga-azioni" style="margin-top:0;">
+                  <button type="button" class="qty-mini-btn btn-qty-opzione" data-gruppo="${g.gruppo.id}" data-opzione="${o.id}" data-delta="-1">−</button>
+                  <span class="qty-mini-val val-qty-opzione" data-gruppo="${g.gruppo.id}" data-opzione="${o.id}">0</span>
+                  <button type="button" class="qty-mini-btn btn-qty-opzione" data-gruppo="${g.gruppo.id}" data-opzione="${o.id}" data-delta="1">+</button>
+                </div>
+              ` : `
+                <label class="suggerito-prodotto-checkbox">
+                  <input type="checkbox" class="chk-var-cliente" data-gruppo="${g.gruppo.id}" value="${o.id}">
+                </label>
+              `}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderGruppoVariazioneHtml(g) {
+    if (g.gruppo.suggerisce_prodotti) return renderGruppoProdottiSuggeritiHtml(g);
+
+    const isQty = !!g.gruppo.abilita_quantita;
+    const isRadio = !isQty && g.gruppo.max_scelte === 1;
+    const tipo = g.gruppo.tipo || 'aggiunta';
+    const senzaLimite = g.gruppo.max_scelte === 0;
+
+    let testoSuggerimento;
+    if (isQty) {
+      testoSuggerimento = 'scegli la quantità che vuoi per ciascuna opzione';
+    } else if (isRadio) {
+      testoSuggerimento = tipo === 'eliminazione' ? 'elimina 1' : 'scegli 1';
+    } else if (tipo === 'eliminazione') {
+      testoSuggerimento = senzaLimite ? 'elimina tutti gli ingredienti che vuoi' : 'elimina fino a ' + g.gruppo.max_scelte;
+    } else if (tipo === 'aggiunta') {
+      testoSuggerimento = senzaLimite ? 'scegli tutti gli ingredienti che vuoi aggiungere' : 'scegli fino a ' + g.gruppo.max_scelte + ' da aggiungere';
+    } else {
+      testoSuggerimento = senzaLimite ? 'scegli quanti ne vuoi' : 'scegli fino a ' + g.gruppo.max_scelte;
+    }
+
+    // Se il prodotto ha un limite condiviso di ingredienti "in aggiunta" (tra più gruppi),
+    // quel numero conta di più del "max_scelte" del singolo gruppo: lo mostriamo al posto
+    // del suggerimento normale, per non confondere il cliente con due numeri diversi.
+    const limiteProdotto = prodottoInDettaglio && prodottoInDettaglio.limite_ingredienti_aggiunta;
+    const contaPerLimiteProdotto = limiteProdotto && !g.gruppo.suggerisce_prodotti && !g.gruppo.obbligatorio && (tipo === 'aggiunta' || tipo === 'entrambi');
+    if (contaPerLimiteProdotto) {
+      testoSuggerimento = `max ${limiteProdotto} aggiunte in totale`;
+    }
+
+    return `
+      <div class="var-gruppo">
+        <div class="var-gruppo-titolo">
+          <span>${tipo === 'eliminazione' ? '➖' : tipo === 'aggiunta' ? '➕' : ''} ${escapeHtml(g.gruppo.nome_gruppo)} ${g.gruppo.obbligatorio ? '<span class="badge">Obbligatorio</span>' : ''}</span>
+          <span class="hint">${testoSuggerimento}</span>
+        </div>
+        ${g.opzioni.map(o => isQty ? `
+          <div class="var-opzione-riga" data-gruppo-riga="${g.gruppo.id}" data-nome-normalizzato="${escapeHtml(normalizzaTesto(o.nome))}">
+            <label style="flex:1;">${escapeHtml(o.nome)} ${o.prezzo_aggiuntivo > 0 ? `<span class="var-opzione-extra">+${formatEuro(o.prezzo_aggiuntivo)} cad.</span>` : ''}</label>
+            <div class="carrello-riga-azioni" style="margin-top:0;">
+              <button type="button" class="qty-mini-btn btn-qty-opzione" data-gruppo="${g.gruppo.id}" data-opzione="${o.id}" data-delta="-1">−</button>
+              <span class="qty-mini-val val-qty-opzione" data-gruppo="${g.gruppo.id}" data-opzione="${o.id}">0</span>
+              <button type="button" class="qty-mini-btn btn-qty-opzione" data-gruppo="${g.gruppo.id}" data-opzione="${o.id}" data-delta="1">+</button>
+            </div>
+          </div>
+        ` : `
+          <div class="var-opzione-riga" data-gruppo-riga="${g.gruppo.id}" data-nome-normalizzato="${escapeHtml(normalizzaTesto(o.nome))}">
+            <label>
+              <input type="${isRadio ? 'radio' : 'checkbox'}" name="gruppo-${g.gruppo.id}" class="chk-var-cliente" data-gruppo="${g.gruppo.id}" value="${o.id}">
+              ${escapeHtml(o.nome)}
+            </label>
+            ${o.prezzo_aggiuntivo > 0 ? `<span class="var-opzione-extra">+${formatEuro(o.prezzo_aggiuntivo)}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Collega gli eventi (checkbox/radio, +/- quantità) ai gruppi appena renderizzati
+  // dentro un contenitore specifico (il dettaglio prodotto o il popup "Hai bisogno anche").
+  function attivaListenerGruppi(cont, onChange) {
+    cont.querySelectorAll('.chk-var-cliente').forEach(el => {
+      el.addEventListener('change', onChange);
+    });
+    cont.querySelectorAll('.btn-qty-opzione').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const span = cont.querySelector(`.val-qty-opzione[data-gruppo="${btn.dataset.gruppo}"][data-opzione="${btn.dataset.opzione}"]`);
+        if (!span) return;
+        let v = (parseInt(span.textContent) || 0) + parseInt(btn.dataset.delta);
+        if (v < 0) v = 0;
+        span.textContent = v;
+        onChange();
+      });
+    });
+    const campoRicerca = cont.querySelector('.cerca-variazioni-globale');
+    if (campoRicerca) {
+      campoRicerca.addEventListener('input', () => filtraRicercaGlobale(cont, campoRicerca.value));
+    }
+  }
+
+  // Un'unica ricerca che filtra le opzioni di TUTTI i gruppi presenti nel contenitore
+  // (non una per gruppo): se un gruppo finisce senza righe visibili, si nasconde anche
+  // il suo titolo, per non lasciare intestazioni vuote a schermo.
+  function filtraRicercaGlobale(cont, valore) {
+    const query = normalizzaTesto(valore);
+    cont.querySelectorAll('.var-gruppo').forEach(gruppoEl => {
+      const righe = gruppoEl.querySelectorAll('.var-opzione-riga');
+      if (!righe.length) return; // gruppi "suggerisce prodotti" non hanno righe di questo tipo: li ignoriamo
+      let almenoUnaVisibile = false;
+      righe.forEach(riga => {
+        const corrisponde = !query || riga.dataset.nomeNormalizzato.includes(query);
+        riga.style.display = corrisponde ? '' : 'none';
+        if (corrisponde) almenoUnaVisibile = true;
+      });
+      gruppoEl.style.display = almenoUnaVisibile ? '' : 'none';
+    });
+  }
+
+  // Costruisce l'HTML di un insieme di gruppi, con UNA sola casella di ricerca in cima
+  // (non una per gruppo) quando le opzioni totali sono abbastanza tante da giustificarla.
+  function costruisciHtmlGruppi(gruppi) {
+    const totaleOpzioni = gruppi.reduce((somma, g) => somma + (g.gruppo.suggerisce_prodotti ? 0 : g.opzioni.length), 0);
+    const ricercaHtml = totaleOpzioni > 10
+      ? `<input type="text" class="cerca-variazioni-globale" placeholder="🔍 Cerca tra tutte le opzioni..." style="margin-bottom:14px;">`
+      : '';
+    return ricercaHtml + gruppi.map(renderGruppoVariazioneHtml).join('');
+  }
+
+  // Legge le selezioni correnti (checkbox/radio + quantità) per un insieme di gruppi,
+  // dentro un contenitore specifico. Ritorna il totale extra e l'elenco opzioni scelte.
+  function leggiSelezioniGruppi(cont, gruppi) {
+    let extra = 0;
+    const opzioniScelte = [];
+    const prodottiSuggeriti = []; // {prodotto, quantita} — dai gruppi "suggerisce prodotti": diventano righe carrello a sé, non si sommano a extra/opzioniScelte
+    gruppi.forEach(g => {
+      if (g.gruppo.suggerisce_prodotti) {
+        g.opzioni.forEach(o => {
+          if (!o.prodottoRiferimento) return;
+          let qty = 0;
+          if (g.gruppo.abilita_quantita) {
+            const span = cont.querySelector(`.val-qty-opzione[data-gruppo="${g.gruppo.id}"][data-opzione="${o.id}"]`);
+            qty = span ? (parseInt(span.textContent) || 0) : 0;
+          } else {
+            const el = cont.querySelector(`.chk-var-cliente[data-gruppo="${g.gruppo.id}"][value="${o.id}"]`);
+            qty = (el && el.checked) ? 1 : 0;
+          }
+          if (qty > 0) prodottiSuggeriti.push({ prodotto: o.prodottoRiferimento, quantita: qty });
+        });
+        return;
+      }
+      if (g.gruppo.abilita_quantita) {
+        g.opzioni.forEach(o => {
+          const span = cont.querySelector(`.val-qty-opzione[data-gruppo="${g.gruppo.id}"][data-opzione="${o.id}"]`);
+          const qty = span ? (parseInt(span.textContent) || 0) : 0;
+          if (qty > 0) {
+            extra += (Number(o.prezzo_aggiuntivo) || 0) * qty;
+            opzioniScelte.push({ id: o.id, gruppo: g.gruppo.nome_gruppo, nome: o.nome, prezzo: Number(o.prezzo_aggiuntivo) || 0, quantita: qty, tipo: g.gruppo.tipo || 'aggiunta' });
+          }
+        });
+      } else {
+        cont.querySelectorAll(`.chk-var-cliente[data-gruppo="${g.gruppo.id}"]:checked`).forEach(el => {
+          const o = g.opzioni.find(x => x.id === el.value);
+          if (o) {
+            extra += Number(o.prezzo_aggiuntivo) || 0;
+            opzioniScelte.push({ id: o.id, gruppo: g.gruppo.nome_gruppo, nome: o.nome, prezzo: Number(o.prezzo_aggiuntivo) || 0, tipo: g.gruppo.tipo || 'aggiunta' });
+          }
+        });
+      }
+    });
+    return { extra, opzioniScelte, prodottiSuggeriti };
+  }
+
+  window.apriDettaglioProdotto = function(prodottoId, opts) {
+    opts = opts || {};
+    prodottoInDettaglio = prodottiList.find(p => p.id === prodottoId);
+    if (!prodottoInDettaglio) return;
+
+    // Reset dello stato di modifica: se questa chiamata arriva da un click normale sul menu
+    // (non da "Modifica" nel carrello), la funzione modificaRigaCarrello lo re-imposterà dopo.
+    modificaCarrelloChiave = null;
+
+    selezioniCorrentiDettaglio = {};
+    qtyCorrente = 1;
+    document.getElementById('dettaglio-qty').textContent = '1';
+    document.getElementById('dettaglio-nome').textContent = prodottoInDettaglio.nome;
+    document.getElementById('dettaglio-descrizione').textContent = prodottoInDettaglio.descrizione || '';
+    const contAllergeni = document.getElementById('dettaglio-allergeni');
+    const allergeniProdotto = (prodottoInDettaglio.prodotti_allergeni || []).filter(pa => pa.allergeni);
+    if (allergeniProdotto.length) {
+      contAllergeni.innerHTML = 'Allergeni: ' + allergeniProdotto.map(pa => `${escapeHtml(pa.allergeni.icona)} ${escapeHtml(pa.allergeni.nome)}`).join(', ');
+      contAllergeni.style.display = 'block';
+    } else {
+      contAllergeni.style.display = 'none';
+    }
+    const imgDettaglio = document.getElementById('dettaglio-immagine');
+    if (prodottoInDettaglio.immagine_url) {
+      imgDettaglio.src = prodottoInDettaglio.immagine_url;
+      imgDettaglio.style.display = 'block';
+      imgDettaglio.onclick = () => ingrandisciFoto(prodottoInDettaglio.immagine_url);
+    } else {
+      imgDettaglio.style.display = 'none';
+      imgDettaglio.onclick = null;
+    }
+    clearMsg('dettaglio-msg');
+
+    // Nella scelta normale (nuovo prodotto) si vedono solo i gruppi "standard". In modifica
+    // dal carrello (opts.includiPostCarrello) si vedono anche i gruppi "hai bisogno anche",
+    // cosi' si possono cambiare pure quelli senza dover ripassare dal popup post-aggiunta.
+    // I gruppi "suggerisce prodotti" restano ESCLUSI anche in modifica: aggiungono righe
+    // carrello a sé (altri prodotti), cosa che non ha senso mentre si modifica QUESTA riga.
+    const gruppiNormali = variazioniPerProdotto[prodottoId] || [];
+    const gruppiPost = (gruppiPostCarrelloPerProdotto[prodottoId] || []).filter(g => !g.gruppo.suggerisce_prodotti);
+    gruppiAttiviDettaglio = opts.includiPostCarrello ? gruppiNormali.concat(gruppiPost) : gruppiNormali;
+
+    const cont = document.getElementById('dettaglio-variazioni');
+    if (!gruppiAttiviDettaglio.length) {
+      cont.innerHTML = '';
+    } else {
+      cont.innerHTML = costruisciHtmlGruppi(gruppiAttiviDettaglio);
+      attivaListenerGruppi(cont, aggiornaPrezzoDettaglio);
+    }
+
+    aggiornaPrezzoDettaglio();
+    openModal('modal-prodotto-dettaglio');
+  };
+
+  document.getElementById('btn-qty-meno').addEventListener('click', () => {
+    if (qtyCorrente > 1) { qtyCorrente--; document.getElementById('dettaglio-qty').textContent = qtyCorrente; aggiornaPrezzoDettaglio(); }
+  });
+  document.getElementById('btn-qty-piu').addEventListener('click', () => {
+    qtyCorrente++; document.getElementById('dettaglio-qty').textContent = qtyCorrente; aggiornaPrezzoDettaglio();
+  });
+
+  function calcolaSelezioniETotale() {
+    return leggiSelezioniGruppi(document.getElementById('dettaglio-variazioni'), gruppiAttiviDettaglio);
+  }
+
+  function aggiornaPrezzoDettaglio() {
+    const { extra } = calcolaSelezioniETotale();
+    const prezzoUnitario = Number(prodottoInDettaglio.prezzo_base) + extra;
+    const totale = prezzoUnitario * qtyCorrente;
+    const etichetta = modificaCarrelloChiave ? 'Salva modifiche' : 'Aggiungi al carrello';
+    document.getElementById('btn-conferma-aggiungi').textContent = `${etichetta} — ${formatEuro(totale)}`;
+    applicaLimiteAggiunte();
+  }
+
+  // Se il prodotto ha un limite massimo di ingredienti "in aggiunta" (impostato in admin),
+  // somma le scelte di TUTTI i gruppi di tipo aggiunta/entrambi collegati (non un limite
+  // per singolo gruppo) e blocca ulteriori aggiunte una volta raggiunto il tetto. I gruppi
+  // "Elimina ingredienti" (tipo eliminazione) non sono mai conteggiati in questo limite.
+  function applicaLimiteAggiunte() {
+    const badge = document.getElementById('dettaglio-limite-aggiunte');
+    const limite = prodottoInDettaglio && prodottoInDettaglio.limite_ingredienti_aggiunta;
+    const cont = document.getElementById('dettaglio-variazioni');
+    if (!limite || !cont) { if (badge) badge.style.display = 'none'; return; }
+
+    const gruppiConteggiati = gruppiAttiviDettaglio.filter(g =>
+      !g.gruppo.suggerisce_prodotti && !g.gruppo.obbligatorio && (g.gruppo.tipo === 'aggiunta' || g.gruppo.tipo === 'entrambi')
+    );
+    if (!gruppiConteggiati.length) { if (badge) badge.style.display = 'none'; return; }
+
+    let totale = 0;
+    gruppiConteggiati.forEach(g => {
+      if (g.gruppo.abilita_quantita) {
+        g.opzioni.forEach(o => {
+          const span = cont.querySelector(`.val-qty-opzione[data-gruppo="${g.gruppo.id}"][data-opzione="${o.id}"]`);
+          totale += span ? (parseInt(span.textContent) || 0) : 0;
+        });
+      } else {
+        totale += cont.querySelectorAll(`.chk-var-cliente[data-gruppo="${g.gruppo.id}"]:checked`).length;
+      }
+    });
+
+    if (badge) {
+      badge.style.display = 'block';
+      badge.style.color = totale >= limite ? 'var(--error)' : 'var(--ink-dim)';
+      badge.textContent = `Ingredienti extra aggiunti: ${totale} di ${limite}`;
+    }
+
+    const raggiunto = totale >= limite;
+    gruppiConteggiati.forEach(g => {
+      if (g.gruppo.abilita_quantita) {
+        g.opzioni.forEach(o => {
+          const btnPiu = cont.querySelector(`.btn-qty-opzione[data-gruppo="${g.gruppo.id}"][data-opzione="${o.id}"][data-delta="1"]`);
+          if (btnPiu) btnPiu.disabled = raggiunto;
+        });
+      } else {
+        cont.querySelectorAll(`.chk-var-cliente[data-gruppo="${g.gruppo.id}"]`).forEach(chk => {
+          if (!chk.checked) chk.disabled = raggiunto;
+        });
+      }
+    });
+  }
+
+  document.getElementById('btn-conferma-aggiungi').addEventListener('click', () => {
+   try {
+    clearMsg('dettaglio-msg');
+    const cont = document.getElementById('dettaglio-variazioni');
+
+    // Validazione gruppi obbligatori (checkbox/radio o quantità, a seconda del gruppo)
+    for (const g of gruppiAttiviDettaglio) {
+      if (!g.gruppo.obbligatorio) continue;
+      let soddisfatto;
+      if (g.gruppo.abilita_quantita) {
+        soddisfatto = g.opzioni.some(o => {
+          const span = cont.querySelector(`.val-qty-opzione[data-gruppo="${g.gruppo.id}"][data-opzione="${o.id}"]`);
+          return span && (parseInt(span.textContent) || 0) > 0;
+        });
+      } else {
+        soddisfatto = cont.querySelectorAll(`.chk-var-cliente[data-gruppo="${g.gruppo.id}"]:checked`).length > 0;
+      }
+      if (!soddisfatto) {
+        showMsg('dettaglio-msg', `Devi scegliere un'opzione per "${g.gruppo.nome_gruppo}".`, 'error');
+        document.getElementById('dettaglio-msg').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+
+    // Controllo di sicurezza sul limite totale di ingredienti in aggiunta (l'interfaccia
+    // dovrebbe già impedire di superarlo disattivando le opzioni, ma verifichiamo comunque).
+    const limite = prodottoInDettaglio.limite_ingredienti_aggiunta;
+    if (limite) {
+      const gruppiConteggiati = gruppiAttiviDettaglio.filter(g =>
+        !g.gruppo.suggerisce_prodotti && !g.gruppo.obbligatorio && (g.gruppo.tipo === 'aggiunta' || g.gruppo.tipo === 'entrambi')
+      );
+      let totaleAggiunte = 0;
+      gruppiConteggiati.forEach(g => {
+        if (g.gruppo.abilita_quantita) {
+          g.opzioni.forEach(o => {
+            const span = cont.querySelector(`.val-qty-opzione[data-gruppo="${g.gruppo.id}"][data-opzione="${o.id}"]`);
+            totaleAggiunte += span ? (parseInt(span.textContent) || 0) : 0;
+          });
+        } else {
+          totaleAggiunte += cont.querySelectorAll(`.chk-var-cliente[data-gruppo="${g.gruppo.id}"]:checked`).length;
+        }
+      });
+      if (totaleAggiunte > limite) {
+        showMsg('dettaglio-msg', `Puoi aggiungere al massimo ${limite} ingredienti in totale.`, 'error');
+        document.getElementById('dettaglio-msg').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+
+    const { extra, opzioniScelte } = calcolaSelezioniETotale();
+    const prezzoUnitario = Number(prodottoInDettaglio.prezzo_base) + extra;
+
+    if (modificaCarrelloChiave) {
+      const riga = carrello.find(r => r.chiave === modificaCarrelloChiave);
+      if (riga) {
+        riga.nome = prodottoInDettaglio.nome;
+        riga.prezzoUnitario = prezzoUnitario;
+        riga.quantita = qtyCorrente;
+        riga.opzioniScelte = opzioniScelte;
+      }
+      modificaCarrelloChiave = null;
+      closeModal('modal-prodotto-dettaglio');
+      renderCarrello();
+      aggiornaFabCarrello();
+      openModal('modal-carrello');
+      return;
+    }
+
+    const voceCarrello = {
+      chiave: Date.now() + '-' + Math.random(),
+      prodotto_id: prodottoInDettaglio.id,
+      nome: prodottoInDettaglio.nome,
+      prezzoUnitario,
+      quantita: qtyCorrente,
+      opzioniScelte
+    };
+
+    const gruppiPost = (gruppiPostCarrelloPerProdotto[prodottoInDettaglio.id] || []).filter(g => g.opzioni.length);
+    closeModal('modal-prodotto-dettaglio');
+
+    if (!gruppiPost.length) {
+      carrello.push(voceCarrello);
+      aggiornaFabCarrello();
+      return;
+    }
+
+    // Il prodotto ha gruppi "post aggiunta carrello" con opzioni: la riga non va ancora
+    // nel carrello, resta in sospeso finché il cliente non risponde al popup "Hai bisogno anche".
+    voceCarrelloInSospeso = voceCarrello;
+    apriPopupHaiBisognoAnche(gruppiPost);
+   } catch (err) {
+    // Errore imprevisto: lo mostriamo in chiaro (invece di far sparire tutto in silenzio)
+    // cosi' se capita di nuovo sappiamo esattamente cosa è successo.
+    console.error('Errore in "Aggiungi al carrello":', err);
+    alert('Si è verificato un errore imprevisto: ' + err.message + '\n\nFai uno screenshot di questo messaggio e mandalo per favore.');
+   }
+  });
+
+  function apriPopupHaiBisognoAnche(gruppiPost) {
+    const cont = document.getElementById('hai-bisogno-anche-opzioni');
+    cont.innerHTML = costruisciHtmlGruppi(gruppiPost);
+    attivaListenerGruppi(cont, () => {}); // qui non serve aggiornare un prezzo live
+    openModal('modal-hai-bisogno-anche');
+  }
+
+  function chiudiPopupHaiBisognoAnche(aggiungiSelezionate) {
+    if (voceCarrelloInSospeso) {
+      if (aggiungiSelezionate) {
+        const cont = document.getElementById('hai-bisogno-anche-opzioni');
+        const gruppiPost = (gruppiPostCarrelloPerProdotto[voceCarrelloInSospeso.prodotto_id] || []).filter(g => g.opzioni.length);
+        const { extra, opzioniScelte, prodottiSuggeriti } = leggiSelezioniGruppi(cont, gruppiPost);
+        voceCarrelloInSospeso.prezzoUnitario += extra;
+        voceCarrelloInSospeso.opzioniScelte = voceCarrelloInSospeso.opzioniScelte.concat(opzioniScelte);
+        carrello.push(voceCarrelloInSospeso);
+
+        // I prodotti scelti da un gruppo "suggerisce prodotti" (es. "Vuoi anche una
+        // centrifuga?") diventano righe carrello a sé stanti, con il loro prodotto_id
+        // reale: si comportano come se il cliente li avesse aggiunti da soli dal menu.
+        prodottiSuggeriti.forEach(({ prodotto, quantita }) => {
+          carrello.push({
+            chiave: Date.now() + '-' + Math.random(),
+            prodotto_id: prodotto.id,
+            nome: prodotto.nome,
+            prezzoUnitario: Number(prodotto.prezzo_base) || 0,
+            quantita,
+            opzioniScelte: []
+          });
+        });
+      } else {
+        carrello.push(voceCarrelloInSospeso);
+      }
+      voceCarrelloInSospeso = null;
+      aggiornaFabCarrello();
+    }
+    closeModal('modal-hai-bisogno-anche');
+  }
+
+  document.getElementById('btn-conferma-hai-bisogno-anche').addEventListener('click', () => chiudiPopupHaiBisognoAnche(true));
+  document.getElementById('btn-salta-hai-bisogno-anche').addEventListener('click', () => chiudiPopupHaiBisognoAnche(false));
+
+  // ================= CARRELLO =================
+  function totaleCarrello() {
+    return carrello.reduce((sum, r) => sum + r.prezzoUnitario * r.quantita, 0);
+  }
+
+  function chiaveCarrelloLocale() {
+    return 'ordini_carrello_' + TENANT_ID;
+  }
+
+  // Salva il carrello nel browser (localStorage) ad ogni modifica, così se l'app/Chrome
+  // viene chiusa a metà ordine, riaprendola il carrello è ancora lì.
+  function salvaCarrelloLocale() {
+    try {
+      localStorage.setItem(chiaveCarrelloLocale(), JSON.stringify(carrello));
+    } catch (e) { /* storage non disponibile: pazienza, si prosegue senza persistenza */ }
+  }
+
+  // Ripristina il carrello salvato in precedenza, scartando eventuali righe di prodotti
+  // nel frattempo rimossi/disattivati dal menu.
+  function ripristinaCarrelloLocale() {
+    try {
+      const salvato = localStorage.getItem(chiaveCarrelloLocale());
+      if (!salvato) return;
+      const righe = JSON.parse(salvato);
+      if (!Array.isArray(righe)) return;
+      carrello = righe.filter(r => prodottiList.some(p => p.id === r.prodotto_id));
+    } catch (e) { /* dato corrotto o non presente: si riparte con carrello vuoto */ }
+  }
+
+  function aggiornaFabCarrello() {
+    const fab = document.getElementById('carrello-fab');
+    const count = carrello.reduce((s, r) => s + r.quantita, 0);
+    const badgeHeader = document.getElementById('carrello-badge-header');
+    if (count > 0) {
+      fab.classList.add('show');
+      document.getElementById('carrello-badge').textContent = count;
+      document.getElementById('carrello-fab-totale').textContent = 'Vedi carrello — ' + formatEuro(totaleCarrello());
+      badgeHeader.textContent = count;
+      badgeHeader.style.display = 'flex';
+    } else {
+      fab.classList.remove('show');
+      badgeHeader.style.display = 'none';
+    }
+    aggiornaBadgeProdottiInCarrello();
+    salvaCarrelloLocale();
+  }
+
+  // Mostra sulla card di ogni prodotto (nel menu) quante unità sono già nel carrello,
+  // sommando tutte le righe carrello di quel prodotto anche se hanno variazioni diverse.
+  function aggiornaBadgeProdottiInCarrello() {
+    const quantitaPerProdotto = {};
+    carrello.forEach(r => {
+      if (!r.prodotto_id) return;
+      quantitaPerProdotto[r.prodotto_id] = (quantitaPerProdotto[r.prodotto_id] || 0) + r.quantita;
+    });
+    document.querySelectorAll('.badge-qty-prodotto').forEach(badge => {
+      const qty = quantitaPerProdotto[badge.dataset.badgeProdotto] || 0;
+      if (qty > 0) {
+        badge.textContent = qty;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    });
+  }
+
+  async function apriModalCarrello() {
+    renderCarrello();
+    generaFasceOrarie();
+    await aggiornaBloccoPrepagato();
+    openModal('modal-carrello');
+  }
+
+  document.getElementById('carrello-fab').addEventListener('click', apriModalCarrello);
+  document.getElementById('btn-carrello-header').addEventListener('click', apriModalCarrello);
+
+  async function aggiornaBloccoPrepagato() {
+    const blocco = document.getElementById('blocco-pagamento-prepagato');
+    const chk = document.getElementById('chk-paga-prepagato');
+    const dettaglio = document.getElementById('dettaglio-prepagato-parziale');
+    chk.checked = false;
+    dettaglio.style.display = 'none';
+    try {
+      let { data, error } = await sbClient.rpc('leggi_saldo_prepagato');
+      if (!error && (data === null || data === undefined)) {
+        const auto = await sbClient.rpc('auto_collega_tessera_per_email');
+        if (!auto.error && auto.data !== null && auto.data !== undefined) data = auto.data;
+      }
+      if (error || data === null || data === undefined || Number(data) <= 0) { blocco.style.display = 'none'; return; }
+
+      saldoPrepagatoCorrente = Number(data);
+      const totale = totaleCarrello();
+      document.getElementById('saldo-disponibile-testo').textContent = formatEuro(saldoPrepagatoCorrente);
+      blocco.style.display = 'block';
+      chk.disabled = false;
+      chk.parentElement.style.opacity = '1';
+
+      const mostraDettaglio = () => {
+        if (!chk.checked) { dettaglio.style.display = 'none'; return; }
+        const importoUsato = Math.min(saldoPrepagatoCorrente, totale);
+        const daPagareInCassa = totale - importoUsato;
+        const residuo = saldoPrepagatoCorrente - importoUsato;
+        if (daPagareInCassa > 0) {
+          dettaglio.textContent = `Verranno scalati ${formatEuro(importoUsato)} dal tuo saldo. Resterà da pagare in cassa: ${formatEuro(daPagareInCassa)}. Credito residuo dopo: ${formatEuro(residuo)}.`;
+        } else {
+          dettaglio.textContent = `L'intero ordine (${formatEuro(totale)}) verrà pagato col saldo. Credito residuo dopo: ${formatEuro(residuo)}.`;
+        }
+        dettaglio.style.display = 'block';
+      };
+      chk.onchange = mostraDettaglio;
+      mostraDettaglio();
+    } catch (e) {
+      blocco.style.display = 'none';
+    }
+  }
+
+  function renderCarrello() {
+    const cont = document.getElementById('carrello-righe');
+    if (!carrello.length) {
+      cont.innerHTML = '<div class="empty-state">Il carrello è vuoto.</div>';
+    } else {
+      cont.innerHTML = carrello.map(r => {
+        const haVariazioniModificabili = (variazioniPerProdotto[r.prodotto_id] || []).length || (gruppiPostCarrelloPerProdotto[r.prodotto_id] || []).some(g => g.opzioni.length);
+        return `
+        <div class="carrello-riga">
+          <div class="carrello-riga-info">
+            <div class="carrello-riga-nome">${escapeHtml(r.nome)}</div>
+            ${r.opzioniScelte.length ? `<div class="carrello-riga-tags">${r.opzioniScelte.map(o => escapeHtml(o.gruppo + ' ' + o.nome + (o.quantita && o.quantita > 1 ? ' x' + o.quantita : ''))).join(' · ')}</div>` : ''}
+            <div class="carrello-riga-azioni">
+              <button type="button" class="qty-mini-btn" onclick="cambiaQtyCarrello('${r.chiave}', -1)">−</button>
+              <span class="qty-mini-val">${r.quantita}</span>
+              <button type="button" class="qty-mini-btn" onclick="cambiaQtyCarrello('${r.chiave}', 1)">+</button>
+              ${haVariazioniModificabili ? `<button type="button" class="btn-modifica-riga" onclick="modificaRigaCarrello('${r.chiave}')">✏️ Modifica</button>` : ''}
+            </div>
+          </div>
+          <div class="carrello-riga-prezzo">${formatEuro(r.prezzoUnitario * r.quantita)}</div>
+        </div>
+      `;
+      }).join('');
+    }
+    document.getElementById('carrello-totale').textContent = formatEuro(totaleCarrello());
+  }
+
+  window.rimuoviDalCarrello = function(chiave) {
+    carrello = carrello.filter(r => r.chiave !== chiave);
+    renderCarrello();
+    aggiornaFabCarrello();
+    if (!carrello.length) closeModal('modal-carrello');
+  };
+
+  window.modificaRigaCarrello = function(chiave) {
+    const riga = carrello.find(r => r.chiave === chiave);
+    if (!riga) return;
+    const prodotto = prodottiList.find(p => p.id === riga.prodotto_id);
+    if (!prodotto) {
+      alert('Questo prodotto non è più disponibile nel menu, quindi non può essere modificato. Puoi rimuoverlo e sceglierne un altro.');
+      return;
+    }
+
+    closeModal('modal-carrello');
+    apriDettaglioProdotto(prodotto.id, { includiPostCarrello: true });
+    modificaCarrelloChiave = chiave; // impostato DOPO: apriDettaglioProdotto lo resetta a null all'apertura
+
+    // Pre-seleziona le variazioni scelte in precedenza (sia i gruppi normali sia quelli
+    // "hai bisogno anche", ora presenti entrambi in gruppiAttiviDettaglio) e la quantità.
+    const cont = document.getElementById('dettaglio-variazioni');
+    gruppiAttiviDettaglio.forEach(g => {
+      g.opzioni.forEach(o => {
+        const scelta = riga.opzioniScelte.find(sel => sel.gruppo === g.gruppo.nome_gruppo && sel.nome === o.nome);
+        if (!scelta) return;
+        if (g.gruppo.abilita_quantita) {
+          const span = cont.querySelector(`.val-qty-opzione[data-gruppo="${g.gruppo.id}"][data-opzione="${o.id}"]`);
+          if (span) span.textContent = scelta.quantita || 1;
+        } else {
+          const el = cont.querySelector(`.chk-var-cliente[data-gruppo="${g.gruppo.id}"][value="${o.id}"]`);
+          if (el) el.checked = true;
+        }
+      });
+    });
+    qtyCorrente = riga.quantita;
+    document.getElementById('dettaglio-qty').textContent = qtyCorrente;
+    aggiornaPrezzoDettaglio();
+  };
+
+  window.annullaModificaDettaglio = function() {
+    const stavamoModificando = !!modificaCarrelloChiave;
+    modificaCarrelloChiave = null;
+    closeModal('modal-prodotto-dettaglio');
+    if (stavamoModificando) {
+      renderCarrello();
+      openModal('modal-carrello');
+    }
+  };
+
+  window.cambiaQtyCarrello = function(chiave, delta) {
+    const riga = carrello.find(r => r.chiave === chiave);
+    if (!riga) return;
+    riga.quantita += delta;
+    if (riga.quantita <= 0) {
+      carrello = carrello.filter(r => r.chiave !== chiave);
+    }
+    renderCarrello();
+    aggiornaFabCarrello();
+    if (!carrello.length) closeModal('modal-carrello');
+  };
+
+  // ================= FASCE ORARIE =================
+  const oggi = new Date();
+  document.getElementById('campo-data-ritiro').min = oggi.toISOString().split('T')[0];
+  document.getElementById('campo-data-ritiro').value = oggi.toISOString().split('T')[0];
+  document.getElementById('campo-data-ritiro').addEventListener('change', generaFasceOrarie);
+
+  function generaFasceOrarie() {
+    const sel = document.getElementById('campo-ora-ritiro');
+    const dataScelta = document.getElementById('campo-data-ritiro').value;
+    if (!dataScelta) { sel.innerHTML = '<option value="">Seleziona prima il giorno</option>'; return; }
+
+    // Legge le fasce specifiche del giorno della settimana selezionato
+    const chiaviGiorno = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
+    const dataObj = new Date(dataScelta + 'T00:00:00');
+    const chiaveGiorno = chiaviGiorno[dataObj.getDay()];
+    const fasceOrarioSettimana = (impostazioni && impostazioni.fasce_orario && typeof impostazioni.fasce_orario === 'object' && !Array.isArray(impostazioni.fasce_orario))
+      ? impostazioni.fasce_orario
+      : {};
+    const fasce = fasceOrarioSettimana[chiaveGiorno] || [];
+
+    if (!fasce.length) {
+      sel.innerHTML = '<option value="">Il locale è chiuso in questo giorno</option>';
+      return;
+    }
+
+    const intervallo = (impostazioni && impostazioni.intervallo_slot_minuti) ? impostazioni.intervallo_slot_minuti : 30;
+
+    const isOggi = dataScelta === oggi.toISOString().split('T')[0];
+    const minutiOra = oggi.getHours() * 60 + oggi.getMinutes();
+
+    const slots = [];
+    fasce.forEach(fascia => {
+      const [hA, mA] = fascia.apertura.split(':').map(Number);
+      const [hC, mC] = fascia.chiusura.split(':').map(Number);
+      let minuti = hA * 60 + mA;
+      const minutiChiusura = hC * 60 + mC;
+
+      while (minuti <= minutiChiusura) {
+        if (!isOggi || minuti > minutiOra + 15) {
+          const h = String(Math.floor(minuti / 60)).padStart(2, '0');
+          const m = String(minuti % 60).padStart(2, '0');
+          slots.push(`${h}:${m}`);
+        }
+        minuti += intervallo;
+      }
+    });
+
+    if (!slots.length) {
+      sel.innerHTML = '<option value="">Nessuna fascia disponibile per oggi</option>';
+    } else {
+      sel.innerHTML = slots.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+  }
+
+  // ================= CONFERMA ORDINE =================
+  document.getElementById('btn-conferma-ordine').addEventListener('click', async () => {
+    clearMsg('carrello-msg');
+    if (!carrello.length) { showMsg('carrello-msg', 'Il carrello è vuoto.', 'error'); return; }
+
+    const dataRitiro = document.getElementById('campo-data-ritiro').value;
+    const oraRitiro = document.getElementById('campo-ora-ritiro').value;
+    if (!dataRitiro || !oraRitiro) { showMsg('carrello-msg', 'Seleziona giorno e fascia oraria per il ritiro.', 'error'); return; }
+
+    const btn = document.getElementById('btn-conferma-ordine');
+    btn.disabled = true; btn.textContent = 'Invio ordine...';
+
+    try {
+      const totale = totaleCarrello();
+      const { data: ordine, error: errOrdine } = await sbClient.from('ordini').insert({
+        tenant_id: TENANT_ID,
+        cliente_id: clienteCorrente.id,
+        stato: 'in_creazione', // diventa "nuovo" (visibile allo spooler) solo a fine preparazione
+        totale,
+        note: document.getElementById('campo-note').value.trim(),
+        data_ritiro: dataRitiro,
+        ora_ritiro: oraRitiro
+      }).select().single();
+      if (errOrdine) throw errOrdine;
+
+      const righe = carrello.map(r => ({
+        ordine_id: ordine.id,
+        prodotto_id: r.prodotto_id,
+        prodotto_nome: r.nome,
+        quantita: r.quantita,
+        opzioni_scelte: r.opzioniScelte,
+        prezzo_unitario: r.prezzoUnitario,
+        prezzo_riga: r.prezzoUnitario * r.quantita
+      }));
+      const { error: errRighe } = await sbClient.from('ordini_righe').insert(righe);
+      if (errRighe) throw errRighe;
+
+      const pagaConPrepagato = document.getElementById('chk-paga-prepagato').checked && !document.getElementById('chk-paga-prepagato').disabled;
+      let avvisoPagamento = '';
+      if (pagaConPrepagato) {
+        const importoDaScalare = Math.min(saldoPrepagatoCorrente, totale);
+        const { error: errPagamento } = await sbClient.rpc('paga_con_prepagato', { ordine_id_input: ordine.id, importo_input: importoDaScalare });
+        if (errPagamento) {
+          avvisoPagamento = 'Il pagamento con il prepagato non è andato a buon fine (' + errPagamento.message + '). Paga pure in negozio.';
+        } else {
+          aggiornaBadgeSaldoHeader();
+        }
+      }
+
+      // Ultimo passo: ora che tutto (righe + eventuale pagamento prepagato) è a posto,
+      // rendiamo l'ordine visibile allo spooler impostando lo stato definitivo.
+      const { error: errAttiva } = await sbClient.from('ordini').update({ stato: 'nuovo' }).eq('id', ordine.id);
+      if (errAttiva) throw errAttiva;
+
+      const avvisoEl = document.getElementById('conferma-avviso');
+      if (avvisoPagamento) {
+        avvisoEl.textContent = avvisoPagamento;
+        avvisoEl.style.display = 'block';
+      } else {
+        avvisoEl.style.display = 'none';
+      }
+
+      document.getElementById('conferma-data-ora').textContent =
+        new Date(dataRitiro + 'T' + oraRitiro).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }) + ' alle ' + oraRitiro;
+
+      const riepilogoPrepagato = document.getElementById('conferma-riepilogo-prepagato');
+      if (pagaConPrepagato && !avvisoPagamento) {
+        const importoUsato = Math.min(saldoPrepagatoCorrente, totale);
+        const daPagareInCassa = totale - importoUsato;
+        riepilogoPrepagato.textContent = daPagareInCassa > 0
+          ? `Totale ${formatEuro(totale)} − ${formatEuro(importoUsato)} saldo prepagato = ${formatEuro(daPagareInCassa)} da pagare in cassa.`
+          : `Ordine interamente pagato col saldo prepagato (${formatEuro(importoUsato)}).`;
+        riepilogoPrepagato.style.display = 'block';
+      } else {
+        riepilogoPrepagato.style.display = 'none';
+      }
+
+      carrello = [];
+      aggiornaFabCarrello();
+      closeModal('modal-carrello');
+      mostraSchermata('schermata-conferma');
+    } catch (err) {
+      showMsg('carrello-msg', 'Errore: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Conferma ordine';
+    }
+  });
+
+  document.getElementById('btn-nuovo-ordine').addEventListener('click', () => {
+    mostraSchermata('schermata-menu');
+  });
+</script>
+
+</body>
+</html>

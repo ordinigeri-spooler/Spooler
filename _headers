@@ -1,0 +1,14 @@
+/ordina.html
+  Cache-Control: no-cache, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/manifest.json
+  Cache-Control: no-cache, must-revalidate
+
+/ordina/*
+  Cache-Control: no-cache, must-revalidate
+
+/tavolo.html
+  Cache-Control: no-cache, must-revalidate
