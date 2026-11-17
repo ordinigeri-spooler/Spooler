@@ -285,26 +285,20 @@
       0 0 9px rgba(255,255,255,.95);
   }
 
-  /* faro: illumina lo sfondo DIETRO le card (le card hanno z-index più alto e restano davanti) */
-  /* FARI DA PALCOSCENICO: due raggi chiari (da sinistra e da destra) che convergono sul
-     prodotto al centro mentre si scrolla, come due luci puntate sullo stesso punto. Dietro alle schede. */
+  /* FARO: striscia orizzontale bianca sfocata dalla categoria attiva, DIETRO ai prodotti */
   #faro-prodotti { display: none; }
   body.cat-left #faro-prodotti {
-    display: block; position: fixed; inset: 0; width: 100%; height: 100%;
-    max-width: none; transform: none; pointer-events: none; z-index: 1;
-    filter: blur(2px);   /* niente blend-mode: così la luce si vede su QUALSIASI sfondo (chiaro o foto) */
-    background:
-      /* alone sul punto a fuoco (il prodotto al centro) */
-      radial-gradient(ellipse 28% 16% at 60% 50%,
-        rgba(255,251,235,.62) 0%, rgba(255,250,232,.26) 48%, rgba(255,250,232,0) 72%),
-      /* raggio da destra (90°) + raggio da sinistra (270°) che convergono sul centro */
-      conic-gradient(from 0deg at 60% 50%,
-        rgba(255,249,230,0) 68deg,
-        rgba(255,249,230,.50) 90deg,
-        rgba(255,249,230,0) 112deg,
-        rgba(255,249,230,0) 248deg,
-        rgba(255,249,230,.50) 270deg,
-        rgba(255,249,230,0) 292deg);
+    display: block; position: fixed; left: 0; right: 0;
+    height: 90px; pointer-events: none;
+    z-index: 1;            /* SOTTO .prodotto(2): sta dietro alle card */
+    background: linear-gradient(to right,
+      rgba(255,255,255,0) 0%,
+      rgba(255,255,255,.55) 15%,
+      rgba(255,255,255,.45) 50%,
+      rgba(255,255,255,.25) 80%,
+      rgba(255,255,255,0) 100%);
+    filter: blur(18px);
+    transition: top 0.3s ease;
   }
 </style>
 </head>
@@ -387,8 +381,8 @@
 
 <script>
 // ================= CONFIGURAZIONE =================
-const SUPABASE_URL = 'https://tsgxnsvwglhebgelwaxn.supabase.co'; // <-- URL del NUOVO progetto Supabase
-const SUPABASE_ANON_KEY = 'sb_publishable_RP3UQhYxOMGRHwHFssJstw_2nILJvrG';           // <-- Publishable/anon key del nuovo progetto
+const SUPABASE_URL = 'https://INSERISCI-PROGETTO.supabase.co'; // <-- URL del NUOVO progetto Supabase
+const SUPABASE_ANON_KEY = 'INSERISCI-CHIAVE-PUBBLICA';           // <-- Publishable/anon key del nuovo progetto
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
 const qs = new URLSearchParams(location.search);
@@ -762,6 +756,7 @@ function aggiornaRuota() {
     b.style.pointerEvents = '';
     b.style.opacity = String(Math.max(0.4, 1 - n * 0.55)); // i lontani piu sbiaditi
   });
+  posizionaFaro();
 }
 
 // FISHEYE prodotti: al centro pieni, verso i bordi alto/basso rimpiccioliscono (la distanza si sente al limite)
@@ -785,7 +780,18 @@ function fisheyeProdotti() {
   });
 }
 
-// i fari da palcoscenico sono statici (CSS, fissi sul centro schermo): nessun posizionamento JS
+// FARO: striscia orizzontale allineata alla categoria attiva
+function posizionaFaro() {
+  const faro = document.getElementById('faro-prodotti');
+  if (!faro) return;
+  const nav = document.querySelector('body.cat-left nav.cat');
+  if (!nav) { faro.style.display = 'none'; return; }
+  const btnOn = nav.querySelector('button.on');
+  if (!btnOn) return;
+  const r = btnOn.getBoundingClientRect();
+  const centroY = r.top + r.height / 2;
+  faro.style.top = (centroY - 45) + 'px';   // 90px altezza, centra sulla categoria
+}
 let rafFaro = 0;
 window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(fisheyeProdotti); }, { passive: true });
 window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); aggiornaStrumenti(); });
