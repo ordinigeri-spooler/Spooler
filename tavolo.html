@@ -82,10 +82,30 @@
   }
   .prodotto .foto-vuota { background: var(--panel-2); display: grid; place-items: center; font-size: 36px; color: #cdb878; }
   .prodotto:active .foto, .prodotto:active .foto-vuota { transform: scale(.96); box-shadow: 0 6px 14px rgba(70,56,20,.14); }
-  .prodotto .nome { font-weight: 700; font-size: 14.5px; margin-top: 9px; line-height: 1.2; padding: 0 3px; }
-  .prodotto .desc { font-size: 12px; color: var(--ink-dim); margin-top: 3px; padding: 0 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .prodotto .riga-prezzo { display: flex; align-items: center; gap: 6px; margin-top: 5px; padding: 0 3px; flex-wrap: wrap; min-height: 20px; }
-  .prodotto .riga-gia { padding: 3px 3px 0; }
+  /* Wrapper testo: nuvola bianca con bordi offuscati (niente rettangolo rigido) */
+  .prodotto .testo-prod { position: relative; margin-top: 8px; padding: 6px 10px 8px; }
+  .prodotto .testo-prod::before {
+    content: ''; position: absolute; inset: -8px -6px -6px -6px;
+    background:
+      radial-gradient(circle at 22% 28%, rgba(255,255,255,.95) 0%, rgba(255,255,255,0) 55%),
+      radial-gradient(circle at 78% 32%, rgba(255,255,255,.90) 0%, rgba(255,255,255,0) 55%),
+      radial-gradient(circle at 50% 55%, rgba(255,255,255,.95) 0%, rgba(255,255,255,0) 60%),
+      radial-gradient(circle at 18% 75%, rgba(255,255,255,.88) 0%, rgba(255,255,255,0) 50%),
+      radial-gradient(circle at 82% 78%, rgba(255,255,255,.88) 0%, rgba(255,255,255,0) 50%),
+      radial-gradient(circle at 48% 95%, rgba(255,255,255,.75) 0%, rgba(255,255,255,0) 45%);
+    filter: blur(6px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .prodotto .testo-prod > * { position: relative; z-index: 1; }
+  .prodotto .nome { font-weight: 800; font-size: 14.5px; margin-top: 0; line-height: 1.2;
+    color: #1f1710; padding: 0; background: transparent; }
+  .prodotto .desc { font-size: 12px; color: #3a2f22; margin-top: 3px; padding: 0; background: transparent;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .prodotto .riga-prezzo { display: flex; align-items: center; gap: 6px; margin-top: 4px;
+    padding: 0; background: transparent; flex-wrap: wrap; min-height: 22px;
+    font-weight: 800; color: #1f1710; }
+  .prodotto .riga-gia { padding: 3px 0 0; background: transparent; }
   .prezzo { font-weight: 800; color: var(--accent); }
   .incluso { font-size: 11px; font-weight: 700; color: var(--ok); background: #e7f0de; padding: 2px 8px; border-radius: 99px; }
   .limite { font-size: 11px; color: var(--ink-dim); }
@@ -668,10 +688,12 @@ function schedaProdotto(p) {
   const media = p.immagine_url ? `<img class="foto" src="${esc(p.immagine_url)}" alt="" loading="lazy">` : '<div class="foto-vuota">🍽️</div>';
   return `<div class="prodotto" id="prod-${p.id}" data-card="${p.id}">
     <div class="media">${media}${badge}<div class="agg">${controllo}</div></div>
-    <div class="nome">${esc(p.nome)}</div>
-    ${p.descrizione ? `<div class="desc">${esc(p.descrizione)}</div>` : ''}
-    <div class="riga-prezzo">${etichettaPrezzo(p)}${allMini}${lp ? `<span class="limite">max ${lp}</span>` : ''}</div>
-    ${giaLbl}
+    <div class="testo-prod">
+      <div class="nome">${esc(p.nome)}</div>
+      ${p.descrizione ? `<div class="desc">${esc(p.descrizione)}</div>` : ''}
+      <div class="riga-prezzo">${etichettaPrezzo(p)}${allMini}${lp ? `<span class="limite">max ${lp}</span>` : ''}</div>
+      ${giaLbl}
+    </div>
   </div>`;
 }
 function etichettaPrezzo(p) {
