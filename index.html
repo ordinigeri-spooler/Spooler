@@ -4531,6 +4531,7 @@ const ICONE_CATEGORIA_BASE64 = {
           <span>
             ${escapeHtml(r.prodotto_nome)}
             ${(r.opzioni_scelte || []).length ? '<br><span style="font-size:12px; color:var(--ink-dim);">' + r.opzioni_scelte.map(op => escapeHtml((op.tipo === 'eliminazione' ? '-' : '+') + op.nome)).join(' · ') + '</span>' : ''}
+            ${r.nota ? '<br><span style="font-size:12px; color:var(--accent); font-weight:700;">📝 ' + escapeHtml(r.nota) + '</span>' : ''}
           </span>
         </span>
         <span style="display:flex; align-items:center; gap:8px;">
@@ -4669,6 +4670,7 @@ const ICONE_CATEGORIA_BASE64 = {
       prodotto_nome: r.prodotto_nome,
       quantita: r.quantita,
       opzioni_scelte: r.opzioni_scelte || [],
+      nota: r.nota || null,
       prezzo_unitario: r.prezzo_unitario,
       prezzo_riga: Number(r.prezzo_unitario) * r.quantita
     }));
@@ -5254,6 +5256,10 @@ const ICONE_CATEGORIA_BASE64 = {
     if (!confirm(`Chiudere il tavolo ${tavolo}? I clienti non potranno più inviare comande e chi scansiona il QR ripartirà da coperti e menu.\n\n(Il conto su Geri non viene toccato.)`)) return;
     const { error } = await sbClient.from('sessioni_tavolo').update({ stato: 'chiusa', chiusa_il: new Date().toISOString(), chiusa_da: 'admin' }).eq('id', id);
     if (error) { alert('Errore: ' + error.message); return; }
+    // Annulla anche gli ordini pendenti di questa sessione, così lo spooler smette di riprovarli.
+    await sbClient.from('ordini').update({ stato: 'annullato' }).eq('sessione_id', id).eq('stato', 'nuovo');
+    await sbClient.from('ordini').update({ geri_stato: 'non_richiesto' }).eq('sessione_id', id).eq('geri_stato', 'da_scrivere');
+    await sbClient.from('ordini').update({ richiesta_ristampa: false, richiesta_riepilogo: false, richiesta_aggiornamento_pos: false }).eq('sessione_id', id).or('richiesta_ristampa.eq.true,richiesta_riepilogo.eq.true,richiesta_aggiornamento_pos.eq.true');
     tvCaricaSessioni();
   };
 
