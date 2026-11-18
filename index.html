@@ -5000,27 +5000,68 @@ const ICONE_CATEGORIA_BASE64 = {
   // ================= TRASCINAMENTO PER RIORDINARE =================
   function abilitaTrascinamento(contenitoreId, ottieniArray, dopoRiordino, condizioneAttiva) {
     const cont = document.getElementById(contenitoreId);
+    let dragSrcId = null;
+
+    // Crea indicatore visivo di posizionamento
+    const indicatore = document.createElement('div');
+    indicatore.style.cssText = 'height:4px; background:var(--accent, #b4441c); border-radius:2px; margin:2px 0; transition:opacity 0.15s; opacity:0; pointer-events:none;';
+
+    function rimuoviIndicatore() {
+      indicatore.style.opacity = '0';
+      if (indicatore.parentNode) indicatore.parentNode.removeChild(indicatore);
+      cont.querySelectorAll('.list-item').forEach(el => {
+        el.style.borderTop = '';
+        el.style.borderBottom = '';
+      });
+    }
 
     cont.addEventListener('dragstart', (e) => {
       const item = e.target.closest('.list-item');
       if (!item || (condizioneAttiva && !condizioneAttiva())) return;
-      e.dataTransfer.setData('text/plain', item.dataset.id);
-      item.style.opacity = '0.5';
+      dragSrcId = item.dataset.id;
+      e.dataTransfer.setData('text/plain', dragSrcId);
+      e.dataTransfer.effectAllowed = 'move';
+      requestAnimationFrame(() => { item.style.opacity = '0.35'; item.style.transform = 'scale(0.97)'; });
     });
 
     cont.addEventListener('dragend', (e) => {
-      const item = e.target.closest('.list-item');
-      if (item) item.style.opacity = '';
+      dragSrcId = null;
+      rimuoviIndicatore();
+      cont.querySelectorAll('.list-item').forEach(el => {
+        el.style.opacity = '';
+        el.style.transform = '';
+      });
     });
 
     cont.addEventListener('dragover', (e) => {
       if (condizioneAttiva && !condizioneAttiva()) return;
       e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const targetItem = e.target.closest('.list-item');
+      if (!targetItem || targetItem.dataset.id === dragSrcId) {
+        rimuoviIndicatore();
+        return;
+      }
+      // Calcola se il mouse è nella metà superiore o inferiore dell'elemento
+      const rect = targetItem.getBoundingClientRect();
+      const metaSopra = e.clientY < rect.top + rect.height / 2;
+      rimuoviIndicatore();
+      indicatore.style.opacity = '1';
+      if (metaSopra) {
+        targetItem.parentNode.insertBefore(indicatore, targetItem);
+      } else {
+        targetItem.parentNode.insertBefore(indicatore, targetItem.nextSibling);
+      }
+    });
+
+    cont.addEventListener('dragleave', (e) => {
+      if (!cont.contains(e.relatedTarget)) rimuoviIndicatore();
     });
 
     cont.addEventListener('drop', async (e) => {
       if (condizioneAttiva && !condizioneAttiva()) return;
       e.preventDefault();
+      rimuoviIndicatore();
       const targetItem = e.target.closest('.list-item');
       if (!targetItem) return;
       const sourceId = e.dataTransfer.getData('text/plain');
