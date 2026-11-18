@@ -5217,27 +5217,63 @@ const ICONE_CATEGORIA_BASE64 = {
   (function abilitaTrascinamentoProdotti() {
     const cont = document.getElementById('lista-prodotti');
     const filtroAttivo = () => document.getElementById('filtro-categoria-prodotti').value;
+    let dragSrcId = null;
+    let ultimoMetaSopra = true;
+
+    const indicatore = document.createElement('div');
+    indicatore.style.cssText = 'height:4px; background:var(--accent, #b4441c); border-radius:2px; margin:2px 0; transition:opacity 0.15s; opacity:0; pointer-events:none;';
+
+    function rimuoviIndicatore() {
+      indicatore.style.opacity = '0';
+      if (indicatore.parentNode) indicatore.parentNode.removeChild(indicatore);
+    }
 
     cont.addEventListener('dragstart', (e) => {
       const item = e.target.closest('.list-item');
       if (!item || !filtroAttivo()) return;
-      e.dataTransfer.setData('text/plain', item.dataset.id);
-      item.style.opacity = '0.5';
+      dragSrcId = item.dataset.id;
+      e.dataTransfer.setData('text/plain', dragSrcId);
+      e.dataTransfer.effectAllowed = 'move';
+      requestAnimationFrame(() => { item.style.opacity = '0.35'; item.style.transform = 'scale(0.97)'; });
     });
 
     cont.addEventListener('dragend', (e) => {
-      const item = e.target.closest('.list-item');
-      if (item) item.style.opacity = '';
+      dragSrcId = null;
+      rimuoviIndicatore();
+      cont.querySelectorAll('.list-item').forEach(el => {
+        el.style.opacity = '';
+        el.style.transform = '';
+      });
     });
 
     cont.addEventListener('dragover', (e) => {
       if (!filtroAttivo()) return;
       e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const targetItem = e.target.closest('.list-item');
+      if (!targetItem || targetItem.dataset.id === dragSrcId) {
+        rimuoviIndicatore();
+        return;
+      }
+      const rect = targetItem.getBoundingClientRect();
+      ultimoMetaSopra = e.clientY < rect.top + rect.height / 2;
+      rimuoviIndicatore();
+      indicatore.style.opacity = '1';
+      if (ultimoMetaSopra) {
+        targetItem.parentNode.insertBefore(indicatore, targetItem);
+      } else {
+        targetItem.parentNode.insertBefore(indicatore, targetItem.nextSibling);
+      }
+    });
+
+    cont.addEventListener('dragleave', (e) => {
+      if (!cont.contains(e.relatedTarget)) rimuoviIndicatore();
     });
 
     cont.addEventListener('drop', async (e) => {
       if (!filtroAttivo()) return;
       e.preventDefault();
+      rimuoviIndicatore();
       const targetItem = e.target.closest('.list-item');
       if (!targetItem) return;
       const sourceId = e.dataTransfer.getData('text/plain');
@@ -5249,7 +5285,13 @@ const ICONE_CATEGORIA_BASE64 = {
       if (fromIdx === -1 || toIdx === -1) return;
 
       const [spostato] = prodottiCache.splice(fromIdx, 1);
-      prodottiCache.splice(toIdx, 0, spostato);
+      let insertIdx;
+      if (fromIdx < toIdx) {
+        insertIdx = ultimoMetaSopra ? toIdx - 1 : toIdx;
+      } else {
+        insertIdx = ultimoMetaSopra ? toIdx : toIdx + 1;
+      }
+      prodottiCache.splice(insertIdx, 0, spostato);
       renderProdotti();
 
       // Salva il nuovo ordine solo per i prodotti della categoria coinvolta
