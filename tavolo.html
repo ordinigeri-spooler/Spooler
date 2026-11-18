@@ -131,42 +131,38 @@
 
   /* categorie — a sinistra (body.cat-left): rail verticale grande e moderno */
   body.cat-left #sotto-ordina { display: flex; gap: 14px; align-items: flex-start; }
-  /* RUOTA categorie — SCROLL-SNAP NATIVO: il browser gestisce touch, momentum, snap */
+  /* COLONNA categorie — semplice lista scrollabile con ombra */
   body.cat-left nav.cat {
     position: sticky; top: calc(72px + env(safe-area-inset-top)); z-index: 10;
-    flex: 0 0 116px; margin: 0; padding: 0; align-self: flex-start;
-    height: calc(100dvh - 150px); background: transparent;
-    overflow: visible;
+    flex: 0 0 110px; margin: 0; padding: 0; align-self: flex-start;
+    height: calc(100dvh - 150px);
+    background: rgba(255,255,255,.65);
+    border-radius: 18px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.10), 0 1px 6px rgba(0,0,0,.06);
+    overflow: hidden;
   }
   body.cat-left nav.cat .scroll {
     display: flex; flex-direction: column; align-items: stretch;
     height: 100%; overflow-y: auto; overflow-x: hidden;
-    scroll-snap-type: y mandatory;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
+    scrollbar-width: none;
     background: transparent; border: 0; border-radius: 0; box-shadow: none;
-    padding: 0; gap: 6px;
+    padding: 6px 0; gap: 4px;
   }
-  body.cat-left nav.cat .scroll::-webkit-scrollbar { display: none; } /* Chrome/Safari */
-  /* Spacer in cima e in fondo per permettere alla prima/ultima di arrivare al centro */
-  body.cat-left nav.cat .scroll .spacer-ruota {
-    flex-shrink: 0; pointer-events: none;
-  }
+  body.cat-left nav.cat .scroll::-webkit-scrollbar { display: none; }
   body.cat-left nav.cat button {
     position: relative; flex-shrink: 0;
-    scroll-snap-align: center;
-    height: 52px; min-height: 52px;
+    height: 48px; min-height: 48px;
     display: flex; align-items: center; justify-content: center;
     white-space: normal; text-align: center; font-family: 'Baloo 2', sans-serif;
-    font-size: 14px; font-weight: 700; line-height: 1.12;
+    font-size: 13px; font-weight: 700; line-height: 1.12;
     word-break: break-word; hyphens: auto;
-    padding: 5px 8px; margin: 0 3px;
-    border: 1px solid rgba(255,255,255,.65); border-radius: 18px;
+    padding: 5px 8px; margin: 0 5px;
+    border: 1px solid rgba(255,255,255,.65); border-radius: 14px;
     background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
-    box-shadow: 0 4px 12px rgba(93,151,201,.35), inset 0 1px 0 rgba(255,255,255,.9);
-    overflow: visible;
-    transform-origin: center center;
-    transition: transform .18s ease-out, opacity .18s ease-out, background .3s ease, box-shadow .3s ease, color .3s ease;
+    box-shadow: 0 2px 6px rgba(93,151,201,.2), inset 0 1px 0 rgba(255,255,255,.9);
+    overflow: hidden;
+    transition: background .3s ease, box-shadow .3s ease, color .3s ease;
   }
   /* sottocategoria nel nav: più piccola, più a destra, sfondo diverso */
   body.cat-left nav.cat button.sub-cat {
@@ -198,19 +194,6 @@
   body.cat-left nav.cat button.on {
     background: linear-gradient(150deg, #9cc6e8 0%, #5b97c9 100%); color: #fff; border-color: rgba(255,255,255,.4);
     box-shadow: 0 14px 30px rgba(74,130,180,.62), inset 0 1px 0 rgba(255,255,255,.45);
-  }
-  /* SLOT centrale — cornice luminosa al centro della ruota */
-  body.cat-left nav.cat .slot-centro {
-    position: absolute; left: 2px; right: 2px; top: 50%; transform: translateY(-50%);
-    height: 60px; border-radius: 20px; pointer-events: none; z-index: 60;
-    border: 2px solid rgba(93,151,201,.18);
-    background: radial-gradient(ellipse at center, rgba(93,151,201,.05) 0%, transparent 70%);
-    transition: border-color .3s, box-shadow .3s, background .3s;
-  }
-  body.cat-left nav.cat .slot-centro.attivo {
-    border-color: rgba(93,151,201,.5);
-    box-shadow: 0 0 16px rgba(93,151,201,.3), inset 0 0 10px rgba(93,151,201,.08);
-    background: radial-gradient(ellipse at center, rgba(93,151,201,.1) 0%, transparent 70%);
   }
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
@@ -407,7 +390,7 @@
   <div id="v-menu" class="hidden">
     <div class="stato" id="stato-comanda"></div>
     <div id="sotto-ordina">
-      <nav class="cat"><div class="slot-centro"></div><div class="scroll" id="tabs-cat"></div></nav>
+      <nav class="cat"><div class="scroll" id="tabs-cat"></div></nav>
       <div id="lista-prodotti"></div>
     </div>
     <div id="sotto-comande" class="hidden"></div>
@@ -787,23 +770,30 @@ function ridisegnaNav() {
     }
   }
 
-  $('tabs-cat').innerHTML = buttons.map((b, i) => {
-    const d = dividiCategoria(b.cat.nome);
-    const haFigli = !b.isSub && navParentMap.has(b.cat.id) && navParentMap.get(b.cat.id).length > 0;
-    const isEspanso = b.cat.id === categoriaEspansa;
-    const cls = [
-      b.isSub ? 'sub-cat' : '',
-      haFigli ? 'has-children' : '',
-      isEspanso ? 'espanso' : ''
-    ].filter(Boolean).join(' ');
-    const dataAttrs = haFigli ? 'data-parent="1"' : '';
-    // Per container senza prodotti: data-vai punta al primo figlio
-    let vaiId = b.cat.id;
-    if (b.isContainer && navParentMap.has(b.cat.id)) {
-      vaiId = navParentMap.get(b.cat.id)[0].id;
-    }
-    return `<button class="${cls}" data-vai="${vaiId}" data-cat="${b.cat.id}" ${dataAttrs}>${esc(d.label)}</button>`;
-  }).join('');
+  const strip = $('tabs-cat');
+  // Spacer in cima: altezza = metà container meno metà bottone, per centrare il primo
+  const navH = strip.parentElement.clientHeight || 300;
+  const spacerH = Math.max(0, navH / 2 - 30);
+
+  strip.innerHTML =
+    '<div class="spacer-ruota" style="height:' + spacerH + 'px"></div>' +
+    buttons.map((b, i) => {
+      const d = dividiCategoria(b.cat.nome);
+      const haFigli = !b.isSub && navParentMap.has(b.cat.id) && navParentMap.get(b.cat.id).length > 0;
+      const isEspanso = b.cat.id === categoriaEspansa;
+      const cls = [
+        b.isSub ? 'sub-cat' : '',
+        haFigli ? 'has-children' : '',
+        isEspanso ? 'espanso' : ''
+      ].filter(Boolean).join(' ');
+      const dataAttrs = haFigli ? 'data-parent="1"' : '';
+      let vaiId = b.cat.id;
+      if (b.isContainer && navParentMap.has(b.cat.id)) {
+        vaiId = navParentMap.get(b.cat.id)[0].id;
+      }
+      return `<button class="${cls}" data-vai="${vaiId}" data-cat="${b.cat.id}" ${dataAttrs}>${esc(d.label)}</button>`;
+    }).join('') +
+    '<div class="spacer-ruota" style="height:' + spacerH + 'px"></div>';
 
   // Click handlers
   document.querySelectorAll('#tabs-cat button[data-cat]').forEach(btn => {
@@ -813,26 +803,25 @@ function ridisegnaNav() {
       const isParent = btn.dataset.parent === '1';
       if (isParent) {
         if (categoriaEspansa === catId) {
-          // Già espanso: scorri al primo figlio
           const el = document.getElementById('cat-' + scrollId);
           if (el) el.scrollIntoView({ behavior: 'smooth' });
         } else {
-          // Espandi questo parent
           categoriaEspansa = catId;
           ridisegnaNav();
-          aggiornaRuota();
           setTimeout(() => {
             const el = document.getElementById('cat-' + scrollId);
             if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }, 350);
+          }, 150);
         }
       } else {
-        // Sottocategoria o standalone: scorri
         const el = document.getElementById('cat-' + scrollId);
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }
     };
   });
+
+  // Setup scroll-snap listener + fisheye
+  setupRuotaScroll();
   aggiornaRuota();
 }
 
@@ -870,7 +859,13 @@ function disegnaMenu() {
   }).join('') : `<div class="vuoto">${testoCerca ? 'Nessun prodotto trovato per «' + esc(testoCerca) + '».' : allergeniEsclusi.size ? 'Nessun piatto senza gli allergeni selezionati.<br><button class="btn sec" style="max-width:220px;margin:14px auto 0" onclick="azzeraFiltri()">Mostra tutto</button>' : 'Nessun piatto disponibile in questo menu.'}</div>`;
   collegaSchede();
   osservaCategorie();
-  aggiornaRuota();
+  // Lo scroll-snap si inizializza in ridisegnaNav() -> setupRuotaScroll()
+  // Scroll iniziale al primo bottone
+  setTimeout(() => {
+    const primo = document.querySelector('#tabs-cat button');
+    if (primo) primo.scrollIntoView({ behavior: 'auto', block: 'center' });
+    aggiornaRuota();
+  }, 50);
   fisheyeProdotti();
   aggiornaBarra();
 }
@@ -957,75 +952,140 @@ function osservaCategorie() {
         ridisegnaNav();
       }
     }
-    // Evidenzia il bottone attivo: se è un figlio e il parent non è espanso, evidenzia il parent
+    // Evidenzia il bottone e scrolla la ruota per centrarlo
     const parentId = parentDiCategoria(id);
+    let targetCat = id;
+    if (!categoriaEspansa && navChildIds.has(id)) targetCat = parentId;
+    // Per il nav orizzontale (non cat-left)
     document.querySelectorAll('#tabs-cat button[data-cat]').forEach(b => {
       const bCat = b.dataset.cat;
-      let on = false;
-      if (bCat === id) on = true; // match diretto (sottocategoria o standalone)
-      else if (bCat === parentId && !categoriaEspansa) on = true; // parent evidenziato se non espanso
-      else if (bCat === parentId && categoriaEspansa === parentId) on = false; // parent espanso: evidenzia il figlio
+      let on = (bCat === id) || (bCat === parentId && !categoriaEspansa);
+      if (bCat === parentId && categoriaEspansa === parentId) on = false;
       b.classList.toggle('on', on);
       if (on && !document.body.classList.contains('cat-left')) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     });
-    aggiornaRuota();
+    // Scrolla la ruota (scroll-snap) per centrare il bottone giusto
+    if (document.body.classList.contains('cat-left')) {
+      scrollRuotaA(targetCat);
+    }
   }, { rootMargin: '-140px 0px -60% 0px' });
   document.querySelectorAll('section.categoria').forEach(s => osservatore.observe(s));
 }
 
-// RUOTA categorie LINEARE: l'attiva grande al centro, le altre a scalare sopra/sotto;
-// dopo l'ultima non appare la prima e viceversa: c'è un inizio e una fine chiari.
-// offsetFraz: offset frazionario per il drag continuo (0 = nessun drag)
-function aggiornaRuota(offsetFraz) {
+// === RUOTA CATEGORIE — SCROLL-SNAP NATIVO ===
+// Il browser gestisce touch, momentum e snap. Noi gestiamo solo l'effetto fisheye
+// visivo (transform + opacity) e la sincronizzazione con i prodotti.
+
+let ruotaProgrammatica = false;  // true quando la ruota scrolla per via dei prodotti
+let ruotaScrollTimer = 0;        // debounce per rilevare fine scroll della ruota
+let ultimaCatRuota = '';         // ultima categoria navigata dalla ruota (evita loop)
+
+// Effetto FISHEYE visivo sui bottoni della ruota: scala e opacità basate sulla
+// distanza dal centro dello scroll container. NON modifica layout (usa transform).
+function aggiornaRuota() {
   const nav = document.querySelector('body.cat-left nav.cat');
   if (!nav) return;
   const strip = nav.querySelector('.scroll'); if (!strip) return;
   const btns = [...strip.querySelectorAll('button')];
-  const N = btns.length; if (!N) return;
-  let att = btns.findIndex(b => b.classList.contains('on'));
-  if (att < 0) att = 0;
-  const fuoco = att + (offsetFraz || 0);     // punto focale frazionario durante il drag
-  const VISIBILI = 5;        // quante categorie mostrare sopra e sotto l'attiva
-  const centro = nav.clientHeight / 2;
-  const semialtezza = centro - 4;  // spazio utile da centro a bordo
-  // --- FISHEYE: al centro grande e spaziata, verso i bordi piccola e compressa ---
-  const POS_EXP = 0.55;
-  const FONT_MAX = 18, FONT_MIN = 10, H_MAX = 62, H_MIN = 20;
+  if (!btns.length) return;
+  const slot = nav.querySelector('.slot-centro');
+  const stripRect = strip.getBoundingClientRect();
+  const centroY = stripRect.top + stripRect.height / 2;
+  const semi = stripRect.height / 2;
+  let minDist = Infinity, nearestIdx = 0;
+
   btns.forEach((b, i) => {
-    const d = i - fuoco;                     // distanza LINEARE frazionaria con segno
-    const ad = Math.abs(d);
-    if (ad > VISIBILI + 0.5) { b.style.opacity = '0'; b.style.pointerEvents = 'none'; return; }
-    const n = Math.min(ad / VISIBILI, 1);    // 0 (centro) .. 1 (bordo)
-    const warp = Math.pow(n, POS_EXP);       // posizione fisheye
-    const peso = 1 - Math.pow(n, 1.45);      // 1 al centro -> 0 al bordo, calo marcato sul finale
+    const r = b.getBoundingClientRect();
+    const btnCentro = r.top + r.height / 2;
+    const distPx = Math.abs(btnCentro - centroY);
+    const n = Math.min(distPx / semi, 1); // 0 = centro, 1 = bordo
+
+    const scala = 1 - 0.28 * Math.pow(n, 0.7);
+    const op = 1 - 0.5 * Math.pow(n, 1.1);
     const isSub = b.classList.contains('sub-cat');
-    const fMax = isSub ? FONT_MAX * 0.75 : FONT_MAX;
-    const hMax = isSub ? H_MAX * 0.68 : H_MAX;
-    b.style.fontSize = (FONT_MIN + (fMax - FONT_MIN) * peso).toFixed(2) + 'px';
-    b.style.minHeight = (H_MIN + (hMax - H_MIN) * peso).toFixed(1) + 'px';
-    b.style.top = (centro + (d < 0 ? -1 : 1) * warp * semialtezza) + 'px';
-    b.style.zIndex = String(50 - Math.round(ad));
-    b.style.pointerEvents = '';
-    b.style.opacity = String(Math.max(0.4, 1 - n * 0.55)); // i lontani piu sbiaditi
+    b.style.transform = 'scale(' + (scala * (isSub ? 0.9 : 1)).toFixed(3) + ')';
+    b.style.opacity = Math.max(0.3, op).toFixed(3);
+
+    if (distPx < minDist) { minDist = distPx; nearestIdx = i; }
   });
+
+  // Evidenzia il bottone più vicino al centro
+  btns.forEach((b, i) => b.classList.toggle('on', i === nearestIdx));
+
+  // Slot luminoso: si accende quando una categoria è ben centrata
+  if (slot) slot.classList.toggle('attivo', minDist < 28);
 }
 
-// FISHEYE prodotti: al centro pieni, verso i bordi alto/basso rimpiccioliscono (la distanza si sente al limite)
+// Scrolla la ruota per portare un certo bottone (by data-cat) al centro
+function scrollRuotaA(catId) {
+  const strip = document.querySelector('body.cat-left nav.cat .scroll');
+  if (!strip) return;
+  const btn = strip.querySelector('button[data-cat="' + catId + '"]');
+  if (!btn) return;
+  ruotaProgrammatica = true;
+  btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Reset flag dopo che lo scroll finisce
+  clearTimeout(ruotaScrollTimer);
+  ruotaScrollTimer = setTimeout(() => { ruotaProgrammatica = false; }, 600);
+}
+
+// Listener scroll sulla ruota: aggiorna fisheye in real-time + naviga ai prodotti a fine scroll
+function setupRuotaScroll() {
+  const strip = document.querySelector('body.cat-left nav.cat .scroll');
+  if (!strip) return;
+  let rafId = 0;
+  let fineScrollTimer = 0;
+
+  strip.addEventListener('scroll', () => {
+    // Aggiorna fisheye in tempo reale (ogni frame)
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(aggiornaRuota);
+
+    // Debounce fine scroll: quando lo scroll si ferma, naviga ai prodotti
+    clearTimeout(fineScrollTimer);
+    fineScrollTimer = setTimeout(() => {
+      if (ruotaProgrammatica) return; // non navigare se lo scroll è stato causato dai prodotti
+      const btns = [...strip.querySelectorAll('button')];
+      const onBtn = btns.find(b => b.classList.contains('on'));
+      if (!onBtn) return;
+      const scrollId = onBtn.dataset.vai;
+      const catId = onBtn.dataset.cat;
+      if (catId === ultimaCatRuota) return; // già lì
+      ultimaCatRuota = catId;
+      // Espandi parent se necessario
+      const isParent = onBtn.dataset.parent === '1';
+      if (isParent && categoriaEspansa !== catId) {
+        categoriaEspansa = catId;
+        ridisegnaNav();
+        // Dopo ridisegno, scrolla ai prodotti
+        setTimeout(() => {
+          const el = document.getElementById('cat-' + scrollId);
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+        return;
+      }
+      const el = document.getElementById('cat-' + scrollId);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 180);
+  }, { passive: true });
+}
+
+// FISHEYE prodotti: al centro pieni, verso i bordi alto/basso rimpiccioliscono
 function fisheyeProdotti() {
   if (!document.body.classList.contains('cat-left')) return;
   const cards = document.querySelectorAll('#lista-prodotti .prodotto');
   if (!cards.length) return;
   const vh = window.innerHeight;
-  const cy = vh / 2;              // centro verticale della finestra
+  const cy = vh / 2;
   const semi = vh / 2;
   cards.forEach(c => {
     const r = c.getBoundingClientRect();
     const centroCard = r.top + r.height / 2;
-    let n = (centroCard - cy) / semi;          // -1 (alto) .. 0 (centro) .. 1 (basso)
+    let n = (centroCard - cy) / semi;
     n = Math.max(-1, Math.min(1, n));
-    const k = Math.pow(Math.abs(n), 2.2);      // ~0 al centro, cresce nell'ultimo terzo fino al bordo
-    const scala = 1 - 0.34 * k;                // fino a ~0.66 proprio al limite
-    const op = 1 - 0.42 * k;                   // dissolversi graduale solo verso i bordi
+    const k = Math.pow(Math.abs(n), 2.2);
+    const scala = 1 - 0.34 * k;
+    const op = 1 - 0.42 * k;
     c.style.transform = 'scale(' + scala.toFixed(3) + ')';
     c.style.opacity = op.toFixed(3);
   });
@@ -1034,119 +1094,6 @@ function fisheyeProdotti() {
 let rafFaro = 0;
 window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(fisheyeProdotti); }, { passive: true });
 window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); aggiornaStrumenti(); });
-
-// --- TOUCH DRAG CONTINUO sulla ruota categorie ---
-// Il dito muove la ruota in tempo reale (lentamente); lo slot centrale si illumina
-// quando una categoria vi entra; al rilascio snappa e mostra i prodotti.
-(function() {
-  let dragging = false;
-  let touchY0 = 0;         // Y iniziale del tocco
-  let startAtt = 0;        // indice attivo al momento del touchstart
-  let dragOffset = 0;      // offset frazionario corrente
-  let lastSnapIdx = -1;    // ultimo indice "evidenziato" durante il drag
-  let rafDrag = 0;
-  const PX_PER_CAT = 280;  // pixel di drag per avanzare di una categoria (molto lento e fluido)
-
-  function getNavState() {
-    const nav = document.querySelector('body.cat-left nav.cat');
-    if (!nav) return null;
-    const strip = nav.querySelector('.scroll');
-    if (!strip) return null;
-    const btns = [...strip.querySelectorAll('button')];
-    if (!btns.length) return null;
-    const slot = nav.querySelector('.slot-centro');
-    return { nav, strip, btns, slot };
-  }
-
-  // Illumina/spegni lo slot centrale
-  function aggiornaSlot(slot, vicino) {
-    if (!slot) return;
-    // vicino = quanto la categoria è vicina al centro (0 = perfettamente centrata, 0.5 = bordo)
-    slot.classList.toggle('attivo', vicino < 0.35);
-  }
-
-  document.addEventListener('touchstart', function(e) {
-    const nav = e.target.closest('body.cat-left nav.cat');
-    if (!nav) return;
-    const s = getNavState(); if (!s) return;
-    dragging = true;
-    touchY0 = e.touches[0].clientY;
-    startAtt = s.btns.findIndex(b => b.classList.contains('on'));
-    if (startAtt < 0) startAtt = 0;
-    dragOffset = 0;
-    lastSnapIdx = startAtt;
-    // Disabilita le transizioni CSS durante il drag per reattività immediata
-    s.btns.forEach(b => b.style.transition = 'none');
-    if (s.slot) s.slot.classList.add('attivo');
-  }, { passive: true });
-
-  document.addEventListener('touchmove', function(e) {
-    if (!dragging) return;
-    e.preventDefault(); // blocca scroll pagina durante il drag della ruota
-    const dy = e.touches[0].clientY - touchY0;
-    // dy negativo = dito verso l'alto = avanti (offset positivo)
-    dragOffset = -dy / PX_PER_CAT;
-    const s = getNavState(); if (!s) return;
-    const N = s.btns.length;
-    // Clamp: non andare oltre i limiti
-    const fuocoRaw = startAtt + dragOffset;
-    if (fuocoRaw < 0) dragOffset = -startAtt;
-    if (fuocoRaw > N - 1) dragOffset = N - 1 - startAtt;
-    cancelAnimationFrame(rafDrag);
-    rafDrag = requestAnimationFrame(() => aggiornaRuota(dragOffset));
-    // Evidenzia la categoria più vicina al centro durante il drag
-    const fuoco = startAtt + dragOffset;
-    const snap = Math.round(Math.max(0, Math.min(N - 1, fuoco)));
-    const distDalCentro = Math.abs(fuoco - snap); // 0 = centrata, 0.5 = tra due
-    aggiornaSlot(s.slot, distDalCentro);
-    if (snap !== lastSnapIdx) {
-      lastSnapIdx = snap;
-      s.btns.forEach((b, i) => b.classList.toggle('on', i === snap));
-    }
-  }, { passive: false });
-
-  document.addEventListener('touchend', function() {
-    if (!dragging) return;
-    dragging = false;
-    const s = getNavState(); if (!s) return;
-    const N = s.btns.length;
-    // Riattiva le transizioni CSS
-    s.btns.forEach(b => b.style.transition = '');
-    // Spegni lo slot
-    if (s.slot) s.slot.classList.remove('attivo');
-    // Snappa alla categoria più vicina
-    const finale = Math.round(Math.max(0, Math.min(N - 1, startAtt + dragOffset)));
-    s.btns.forEach((b, i) => b.classList.toggle('on', i === finale));
-    dragOffset = 0;
-    aggiornaRuota();
-    // Scrolla ai prodotti della categoria selezionata
-    const btn = s.btns[finale];
-    if (btn) {
-      const scrollId = btn.dataset.vai;
-      const el = document.getElementById('cat-' + scrollId);
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-      // Se è un parent con figli, espandilo
-      const catId = btn.dataset.cat;
-      const isParent = btn.dataset.parent === '1';
-      if (isParent && categoriaEspansa !== catId) {
-        categoriaEspansa = catId;
-        ridisegnaNav();
-        aggiornaRuota();
-      }
-    }
-  }, { passive: true });
-
-  // Se il tocco esce dal nav senza touchend (raro), annulla il drag
-  document.addEventListener('touchcancel', function() {
-    if (!dragging) return;
-    dragging = false;
-    const s = getNavState(); if (!s) return;
-    s.btns.forEach(b => b.style.transition = '');
-    if (s.slot) s.slot.classList.remove('attivo');
-    dragOffset = 0;
-    aggiornaRuota();
-  }, { passive: true });
-})();
 
 // ---------- filtro allergeni ----------
 function aggiornaBarraFiltri() {
