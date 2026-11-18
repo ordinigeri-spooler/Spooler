@@ -74,9 +74,10 @@
   nav.cat button.has-children { padding-right: 22px; position: relative; }
   nav.cat button.has-children::after { content: '▾'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 10px; opacity: .5; font-family: system-ui; }
   nav.cat button.has-children.espanso::after { content: '▴'; }
-  section.categoria h3 { font-size: 21px; margin: 18px 0 8px; scroll-margin-top: 130px; }
+  section.categoria { scroll-margin-top: 130px; }
+  section.categoria h3 { font-size: 21px; margin: 18px 0 8px; }
 
-  /* === STILI BOTTONI CATEGORIE === */
+  /* === STILI CATEGORIE (bottoni + titoli + prodotti) === */
 
   /* STILE 2: COLORFUL — bordi scuri, colori pieni, retro vivace */
   .cat-style-colorful nav.cat button {
@@ -95,10 +96,15 @@
     background: #e0a330; color: #fff; border-color: #8a6414;
     box-shadow: 0 2px 0 #8a6414;
   }
-  .cat-style-colorful.cat-left nav.cat button {
-    border-radius: 16px; box-shadow: 0 3px 0 #2c3e50;
-  }
+  .cat-style-colorful.cat-left nav.cat button { border-radius: 16px; }
   .cat-style-colorful.cat-left nav.cat button::after { display: none; }
+  .cat-style-colorful section.categoria h3 {
+    color: #2c3e50; border-bottom: 2.5px solid #2c3e50; padding-bottom: 4px; display: inline-block;
+  }
+  .cat-style-colorful .prodotto .foto, .cat-style-colorful .prodotto .foto-vuota {
+    border: 2.5px solid #2c3e50; border-radius: 16px;
+  }
+  .cat-style-colorful .prod-gruppo { background: #2c3e50; }
 
   /* STILE 3: CHROME — metallico argentato con bordo blu */
   .cat-style-chrome nav.cat button {
@@ -122,6 +128,18 @@
   }
   .cat-style-chrome.cat-left nav.cat button { border-radius: 20px; }
   .cat-style-chrome.cat-left nav.cat button::after { display: none; }
+  .cat-style-chrome section.categoria h3 {
+    color: #3a5a7a;
+    text-shadow: 0 1px 0 rgba(255,255,255,.6);
+  }
+  .cat-style-chrome .prodotto .foto, .cat-style-chrome .prodotto .foto-vuota {
+    border: 2px solid #9ab0c8; border-radius: 18px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .cat-style-chrome .prod-gruppo {
+    background: linear-gradient(180deg, #bbb 0%, #888 100%);
+    border: 2px solid #6688aa; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
 
   /* STILE 4: GLOSSY — nero/scuro lucido con highlight in alto */
   .cat-style-glossy nav.cat button {
@@ -144,6 +162,24 @@
   }
   .cat-style-glossy.cat-left nav.cat button { border-radius: 14px; }
   .cat-style-glossy.cat-left nav.cat button::after { display: none; }
+  .cat-style-glossy section.categoria h3 { color: #ddd; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  .cat-style-glossy .prodotto .nome { color: #eee; }
+  .cat-style-glossy .prodotto .desc { color: #bbb; }
+  .cat-style-glossy .prodotto .riga-prezzo { color: #ddd; }
+  .cat-style-glossy .prodotto .testo-prod::before {
+    background:
+      radial-gradient(circle at 50% 50%, rgba(30,30,30,.92) 0%, rgba(30,30,30,0) 65%);
+    filter: blur(8px);
+  }
+  .cat-style-glossy .prodotto .foto, .cat-style-glossy .prodotto .foto-vuota {
+    border: 1.5px solid #444; border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.4);
+  }
+  .cat-style-glossy .prodotto .foto-vuota { background: #2a2a2a; color: #666; }
+  .cat-style-glossy .prod-gruppo {
+    background: linear-gradient(180deg, #444 0%, #222 100%); color: #f0d888;
+    border: 1px solid #555;
+  }
 
   /* STILE 5: FLAT — bianco pulito con bordo sottile colorato */
   .cat-style-flat nav.cat button {
@@ -162,6 +198,15 @@
   }
   .cat-style-flat.cat-left nav.cat button { border-radius: 12px; }
   .cat-style-flat.cat-left nav.cat button::after { display: none; }
+  .cat-style-flat section.categoria h3 {
+    color: #2c5f8a; font-weight: 800; letter-spacing: .3px;
+  }
+  .cat-style-flat .prodotto .foto, .cat-style-flat .prodotto .foto-vuota {
+    border: 1.5px solid #d0dfe8; border-radius: 12px;
+  }
+  .cat-style-flat .prod-gruppo {
+    background: #2c7fcc; border-radius: 6px;
+  }
 
   /* griglia prodotti — PLU senza cornice, fusi col background */
   .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 12px; }
