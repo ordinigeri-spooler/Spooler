@@ -1705,7 +1705,7 @@ const ICONE_CATEGORIA_BASE64 = {
           </div>
         </div>
         <div class="item-actions">
-          <button class="secondary" onclick="event.stopPropagation(); nuovoProdottoInCategoria('${cat.id}')" style="font-size:12px; padding:6px 10px;" title="Aggiungi prodotto in ${escapeHtml(cat.nome)}">➕ Prodotto</button>
+          <button class="secondary" onclick="event.stopPropagation(); nuovaSottocategoria('${cat.id}')" style="font-size:12px; padding:6px 10px;" title="Aggiungi sotto-categoria in ${escapeHtml(cat.nome)}">➕</button>
           <button class="secondary" onclick="modificaCategoria('${cat.id}')">Modifica</button>
           <button class="danger" onclick="eliminaCategoria('${cat.id}')">Elimina</button>
         </div>
@@ -2622,36 +2622,20 @@ const ICONE_CATEGORIA_BASE64 = {
     document.getElementById('blocco-limite-aggiunte').style.display = e.target.checked ? 'block' : 'none';
   });
 
-  // ---- Aggiungi prodotto veloce da categoria ----
-  window.nuovoProdottoInCategoria = function(categoriaId) {
-    // Passa alla sezione Prodotti
-    document.querySelectorAll('nav .tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('main .section').forEach(s => s.classList.remove('active'));
-    const tabProdotti = document.querySelector('nav .tab[data-section="prodotti"]');
-    if (tabProdotti) tabProdotti.classList.add('active');
-    document.getElementById('section-prodotti').classList.add('active');
-    // Reset form e apri modal con la categoria pre-selezionata
-    document.getElementById('form-prodotto').reset();
-    document.getElementById('prodotto-id').value = '';
-    document.getElementById('prodotto-attivo').checked = true;
-    document.getElementById('prodotto-novita').checked = false;
-    document.getElementById('prodotto-personalizza-bottone').checked = false;
-    document.getElementById('blocco-colore-bottone-prodotto').style.display = 'none';
-    document.getElementById('prodotto-limita-aggiunte').checked = false;
-    document.getElementById('prodotto-limite-aggiunte-numero').value = 2;
-    document.getElementById('blocco-limite-aggiunte').style.display = 'none';
-    document.getElementById('prodotto-immagine-preview').classList.remove('show');
-    document.getElementById('ricerca-immagine-query').value = '';
-    document.getElementById('ricerca-immagine-stato').textContent = '';
-    document.getElementById('ricerca-immagine-risultati').innerHTML = '';
-    document.getElementById('modal-prodotto-title').textContent = 'Nuovo prodotto';
-    document.getElementById('prodotto-categoria').value = categoriaId;
-    document.getElementById('filtro-categoria-prodotti').value = categoriaId;
-    document.getElementById('prodotto-ordine').value = calcolaProssimoOrdineProdotto(categoriaId);
-    renderChecklistVariazioniProdotto([]);
-    renderChecklistAllergeniProdotto([]);
-    clearMsg('prodotto-msg');
-    openModal('modal-prodotto');
+  // ---- Aggiungi sotto-categoria veloce ----
+  window.nuovaSottocategoria = function(categoriaParentId) {
+    document.getElementById('form-categoria').reset();
+    document.getElementById('categoria-id').value = '';
+    document.getElementById('categoria-attivo').checked = true;
+    document.getElementById('categoria-immagine-preview').classList.remove('show');
+    document.getElementById('modal-categoria-title').textContent = 'Nuova sotto-categoria';
+    document.getElementById('categoria-personalizza-colori').checked = false;
+    document.getElementById('blocco-colori-categoria').style.display = 'none';
+    renderChecklistGruppiCategoria([]);
+    clearMsg('categoria-msg');
+    // Pre-seleziona la categoria padre
+    document.getElementById('categoria-collegata').value = categoriaParentId;
+    openModal('modal-categoria');
   };
 
   document.getElementById('btn-nuovo-prodotto').addEventListener('click', () => {
