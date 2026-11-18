@@ -422,7 +422,7 @@
         <select id="filtro-categoria-prodotti" style="max-width:280px;">
           <option value="">Tutte le categorie</option>
         </select>
-        <button id="btn-modalita-sposta" class="secondary" style="font-size:12px; padding:6px 12px; display:none;">📦 Sposta in altra categoria</button>
+        <button id="btn-modalita-sposta" class="secondary" style="font-size:12px; padding:6px 12px;">📦 Sposta in altra categoria</button>
         <input type="text" id="ricerca-prodotti" placeholder="🔍 Cerca prodotto..." style="max-width:280px;">
         <label style="margin-left:auto; display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; white-space:nowrap; color:var(--ink-dim);">
           <input type="checkbox" id="mostra-inattivi" style="width:16px; height:16px;"> Visualizza inattivi
@@ -2026,12 +2026,10 @@ const ICONE_CATEGORIA_BASE64 = {
   document.getElementById('btn-modalita-sposta').addEventListener('click', () => {
     modalitaSpostaAttiva = true;
     document.getElementById('barra-sposta-prodotti').style.display = 'block';
-    // Popola il select destinazione con tutte le categorie tranne quella attuale
-    const categoriaCorrente = document.getElementById('filtro-categoria-prodotti').value;
+    // Popola il select destinazione con tutte le categorie
     const albero = categorieOrdineAlbero();
     const selDest = document.getElementById('sposta-categoria-destinazione');
     selDest.innerHTML = albero
-      .filter(({ cat }) => cat.id !== categoriaCorrente)
       .map(({ cat, livello }) => `<option value="${cat.id}">${livello > 0 ? '↳ ' : ''}${escapeHtml(cat.nome)}</option>`)
       .join('');
     renderProdotti();
@@ -2276,10 +2274,6 @@ const ICONE_CATEGORIA_BASE64 = {
 
   document.getElementById('filtro-categoria-prodotti').addEventListener('change', () => {
     renderProdotti();
-    const filtroId = document.getElementById('filtro-categoria-prodotti').value;
-    document.getElementById('btn-modalita-sposta').style.display = filtroId ? '' : 'none';
-    // Se cambi categoria, esci dalla modalità spostamento
-    chiudiModalitaSposta();
   });
 
   function calcolaProssimoOrdineProdotto(categoriaId) {
