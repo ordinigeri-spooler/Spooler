@@ -67,8 +67,13 @@
   nav.cat { position: sticky; top: calc(68px + env(safe-area-inset-top)); z-index: 10; background: var(--bg); padding: 10px 0 8px; margin: 0 -16px; }
   nav.cat .scroll { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; }
   nav.cat .scroll::-webkit-scrollbar { display: none; }
-  nav.cat button { white-space: nowrap; padding: 9px 16px; border-radius: 99px; background: rgba(224,163,48,.14); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1.5px solid rgba(224,163,48,.32); color: #9a6a12; font-weight: 700; font-size: 14px; }
+  nav.cat button { white-space: nowrap; padding: 9px 16px; border-radius: 99px; background: rgba(224,163,48,.14); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1.5px solid rgba(224,163,48,.32); color: #9a6a12; font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 14px; }
   nav.cat button.on { background: #e0a330; border-color: #e0a330; color: #fff; box-shadow: 0 6px 16px rgba(224,163,48,.4); }
+  nav.cat button.sub-cat { font-size: 12px; padding: 7px 12px; opacity: .85; }
+  nav.cat button.sub-cat.on { opacity: 1; }
+  nav.cat button.has-children { padding-right: 22px; position: relative; }
+  nav.cat button.has-children::after { content: '▾'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 10px; opacity: .5; font-family: system-ui; }
+  nav.cat button.has-children.espanso::after { content: '▴'; }
   section.categoria h3 { font-size: 21px; margin: 18px 0 8px; scroll-margin-top: 130px; }
 
   /* griglia prodotti — PLU senza cornice, fusi col background */
@@ -149,9 +154,10 @@
     overflow: visible;
     transition: top .38s cubic-bezier(.2,.85,.25,1), font-size .38s cubic-bezier(.2,.85,.25,1), min-height .38s cubic-bezier(.2,.85,.25,1), opacity .3s ease, background .3s ease, box-shadow .3s ease, color .3s ease;
   }
-  /* sottocategoria nel nav: più piccola, sfondo diverso */
+  /* sottocategoria nel nav: più piccola, più a destra, sfondo diverso */
   body.cat-left nav.cat button.sub-cat {
-    left: 12px; right: 12px;
+    left: 18px; right: 6px;
+    border-radius: 14px;
     background: linear-gradient(150deg, #fff8e6 0%, #f5e8c4 100%);
     border-color: rgba(224,163,48,.4);
     color: #6a4d0a; font-weight: 600;
@@ -161,14 +167,12 @@
     background: linear-gradient(150deg, #f0c858 0%, #e0a330 100%); color: #fff;
     box-shadow: 0 8px 20px rgba(224,163,48,.5), inset 0 1px 0 rgba(255,255,255,.3);
   }
-  /* parent con figli: indicatore espandi */
-  body.cat-left nav.cat button.has-children::after {
-    content: '▾'; position: absolute; right: 6px; bottom: 2px; font-size: 10px; opacity: .5;
-    font-family: system-ui; pointer-events: none; border-radius: 0; background: none;
-    width: auto; height: auto; transform: none; top: auto; left: auto;
-    filter: none;
+  /* parent con figli: indicatore espandi (usa ::before dato che ::after è il riflesso glass) */
+  body.cat-left nav.cat button.has-children::before {
+    content: '▾'; position: absolute; right: 5px; bottom: 1px; font-size: 9px; opacity: .45;
+    font-family: system-ui; pointer-events: none;
   }
-  body.cat-left nav.cat button.has-children.espanso::after { content: '▴'; opacity: .7; }
+  body.cat-left nav.cat button.has-children.espanso::before { content: '▴'; opacity: .65; }
   body.cat-left nav.cat .cat-gruppo { display: none; }   /* ruota: niente fasce-gruppo inline nel rail */
   /* riflesso diagonale "glass" */
   body.cat-left nav.cat button::after {
@@ -669,19 +673,166 @@ function passaCerca(p) {
   if (!testoCerca) return true;
   return senzaAccenti(p.nome).includes(testoCerca) || senzaAccenti(p.descrizione).includes(testoCerca);
 }
+// Costruisce l'albero usando TUTTE le categorie (anche container senza prodotti)
+// poi filtra: nel nav mostra solo parent con almeno un figlio con prodotti
+function costruisciAlberoNav(catsConProdotti) {
+  navParentMap = new Map();
+  navChildIds = new Set();
+  const idsConProdotti = new Set(catsConProdotti.map(c => c.id));
+  const tutteCat = catalogo.categorie;
+  // 1) Mappa parent -> figli da TUTTE le categorie
+  for (const c of tutteCat) {
+    if (c.categoria_collegata_id) {
+      navChildIds.add(c.id);
+      if (!navParentMap.has(c.categoria_collegata_id)) navParentMap.set(c.categoria_collegata_id, []);
+      navParentMap.get(c.categoria_collegata_id).push(c);
+    }
+  }
+  // 2) Tieni solo figli che hanno prodotti
+  for (const [pid, figli] of navParentMap.entries()) {
+    const filtrati = figli.filter(c => idsConProdotti.has(c.id));
+    if (filtrati.length) navParentMap.set(pid, filtrati);
+    else navParentMap.delete(pid);
+  }
+  // 3) navChildIds = solo figli con prodotti
+  navChildIds = new Set();
+  for (const figli of navParentMap.values()) {
+    for (const f of figli) navChildIds.add(f.id);
+  }
+}
+
+// Ordina le categorie nello stile albero dell'admin:
+// parent in ordine, poi i suoi figli in ordine, poi il prossimo parent
+function ordinaAlbero(catsConProdotti) {
+  const idsConProdotti = new Set(catsConProdotti.map(c => c.id));
+  const catMap = new Map(catsConProdotti.map(c => [c.id, c]));
+  const risultato = [];
+  const inseriti = new Set();
+  // Prendi TUTTE le categorie (ordine_visualizzazione) per costruire l'ordine
+  const tutteCat = catalogo.categorie;
+  for (const c of tutteCat) {
+    if (navChildIds.has(c.id)) continue; // salta figli (li inseriamo dopo il parent)
+    if (inseriti.has(c.id)) continue;
+    // Questo è un root/parent. Se ha prodotti, aggiungilo
+    if (idsConProdotti.has(c.id)) { risultato.push(catMap.get(c.id)); inseriti.add(c.id); }
+    // Se è un parent container (senza prodotti propri), lo saltiamo dalla lista prodotti
+    // ma i suoi figli vanno comunque inseriti qui in ordine
+    const figli = navParentMap.get(c.id);
+    if (figli) {
+      for (const f of figli) {
+        if (!inseriti.has(f.id) && idsConProdotti.has(f.id)) {
+          risultato.push(catMap.get(f.id)); inseriti.add(f.id);
+        }
+      }
+    }
+  }
+  // Aggiungi eventuali orfani non ancora inseriti
+  for (const c of catsConProdotti) {
+    if (!inseriti.has(c.id)) risultato.push(c);
+  }
+  return risultato;
+}
+
+function ridisegnaNav() {
+  if (!navCats.length) { $('tabs-cat').innerHTML = ''; return; }
+  const idsConProdotti = new Set(navCats.map(c => c.id));
+  const buttons = [];
+  const tutteCat = catalogo.categorie;
+  const inseriti = new Set();
+
+  // Percorri tutte le categorie in ordine admin per costruire i bottoni
+  for (const c of tutteCat) {
+    if (navChildIds.has(c.id)) continue; // figli gestiti sotto
+    if (inseriti.has(c.id)) continue;
+    const haFigli = navParentMap.has(c.id) && navParentMap.get(c.id).length > 0;
+    const haProdotti = idsConProdotti.has(c.id);
+    if (!haFigli && !haProdotti) continue; // non pertinente
+    // Aggiungi il root/parent come bottone
+    buttons.push({ cat: c, isSub: false, isContainer: !haProdotti && haFigli });
+    inseriti.add(c.id);
+    // Se espanso, inserisci i figli subito dopo
+    if (c.id === categoriaEspansa && haFigli) {
+      for (const sub of navParentMap.get(c.id)) {
+        buttons.push({ cat: sub, isSub: true });
+        inseriti.add(sub.id);
+      }
+    }
+  }
+
+  $('tabs-cat').innerHTML = buttons.map((b, i) => {
+    const d = dividiCategoria(b.cat.nome);
+    const haFigli = !b.isSub && navParentMap.has(b.cat.id) && navParentMap.get(b.cat.id).length > 0;
+    const isEspanso = b.cat.id === categoriaEspansa;
+    const cls = [
+      b.isSub ? 'sub-cat' : '',
+      haFigli ? 'has-children' : '',
+      isEspanso ? 'espanso' : ''
+    ].filter(Boolean).join(' ');
+    const dataAttrs = haFigli ? 'data-parent="1"' : '';
+    // Per container senza prodotti: data-vai punta al primo figlio
+    let vaiId = b.cat.id;
+    if (b.isContainer && navParentMap.has(b.cat.id)) {
+      vaiId = navParentMap.get(b.cat.id)[0].id;
+    }
+    return `<button class="${cls}" data-vai="${vaiId}" data-cat="${b.cat.id}" ${dataAttrs}>${esc(d.label)}</button>`;
+  }).join('');
+
+  // Click handlers
+  document.querySelectorAll('#tabs-cat button[data-cat]').forEach(btn => {
+    btn.onclick = () => {
+      const catId = btn.dataset.cat;
+      const scrollId = btn.dataset.vai;
+      const isParent = btn.dataset.parent === '1';
+      if (isParent) {
+        if (categoriaEspansa === catId) {
+          // Già espanso: scorri al primo figlio
+          const el = document.getElementById('cat-' + scrollId);
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          // Espandi questo parent
+          categoriaEspansa = catId;
+          ridisegnaNav();
+          aggiornaRuota();
+          setTimeout(() => {
+            const el = document.getElementById('cat-' + scrollId);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }, 60);
+        }
+      } else {
+        // Sottocategoria o standalone: scorri
+        const el = document.getElementById('cat-' + scrollId);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+  });
+  aggiornaRuota();
+}
+
+function parentDiCategoria(catId) {
+  // Se catId è un figlio, ritorna il parent. Altrimenti catId stesso.
+  if (navChildIds.has(catId)) {
+    // Cerca in navParentMap
+    for (const [pid, figli] of navParentMap.entries()) {
+      if (figli.some(f => f.id === catId)) return pid;
+    }
+  }
+  return catId;
+}
+
 function disegnaMenu() {
   const cats = catalogo.categorie
     .map(c => ({ ...c, prodotti: catalogo.prodotti.filter(p => p.categoria_id === c.id && visibile(p) && passaAllergeni(p) && passaCerca(p)) }))
     .filter(c => c.prodotti.length);
-  let gruppoPrec = null;
-  $('tabs-cat').innerHTML = cats.map((c, i) => {
-    const d = dividiCategoria(c.nome);
-    const header = d.gruppo && d.gruppo !== gruppoPrec ? `<div class="cat-gruppo">${esc(d.gruppo)}</div>` : '';
-    gruppoPrec = d.gruppo;
-    return `${header}<button class="${i ? '' : 'on'}" data-vai="${c.id}">${esc(d.label)}</button>`;
-  }).join('');
+  navCats = cats;
+  costruisciAlberoNav(cats);
+  categoriaEspansa = null;
+  // Ordina le categorie nello stile albero (come nell'admin)
+  const catsOrdinati = ordinaAlbero(cats);
+  // Nav buttons (solo parents inizialmente)
+  ridisegnaNav();
+  // Prodotti: tutte le categorie con prodotti, nell'ordine albero
   let gruppoProd = null;
-  $('lista-prodotti').innerHTML = cats.length ? cats.map(c => {
+  $('lista-prodotti').innerHTML = catsOrdinati.length ? catsOrdinati.map(c => {
     const d = dividiCategoria(c.nome);
     const band = d.gruppo && d.gruppo !== gruppoProd ? `<div class="prod-gruppo">${esc(d.gruppo)}</div>` : '';
     gruppoProd = d.gruppo;
@@ -689,9 +840,6 @@ function disegnaMenu() {
       <div class="griglia">${c.prodotti.map(p => schedaProdotto(p)).join('')}</div>
     </section>`;
   }).join('') : `<div class="vuoto">${testoCerca ? 'Nessun prodotto trovato per «' + esc(testoCerca) + '».' : allergeniEsclusi.size ? 'Nessun piatto senza gli allergeni selezionati.<br><button class="btn sec" style="max-width:220px;margin:14px auto 0" onclick="azzeraFiltri()">Mostra tutto</button>' : 'Nessun piatto disponibile in questo menu.'}</div>`;
-  document.querySelectorAll('[data-vai]').forEach(b => b.onclick = () => {
-    document.getElementById('cat-' + b.dataset.vai).scrollIntoView({ behavior: 'smooth' });
-  });
   collegaSchede();
   osservaCategorie();
   aggiornaRuota();
@@ -758,8 +906,38 @@ function osservaCategorie() {
     const vis = voci.filter(v => v.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
     if (!vis) return;
     const id = vis.target.id.slice(4);
-    document.querySelectorAll('[data-vai]').forEach(b => {
-      const on = b.dataset.vai === id; b.classList.toggle('on', on);
+    // Auto-espandi/comprimi sottocategorie nel nav
+    if (categoriaEspansa) {
+      const parentAttuale = parentDiCategoria(id);
+      if (parentAttuale !== categoriaEspansa) {
+        // Siamo usciti dal parent espanso: comprimi
+        // Se la nuova categoria è figlia di un altro parent, espandi quello
+        if (navChildIds.has(id)) {
+          categoriaEspansa = parentDiCategoria(id);
+        } else if (navParentMap.has(id)) {
+          // Siamo su un parent che ha figli: espandilo
+          categoriaEspansa = id;
+        } else {
+          categoriaEspansa = null;
+        }
+        ridisegnaNav();
+      }
+    } else {
+      // Nessun parent espanso: se scrolliamo su un figlio, espandi il suo parent
+      if (navChildIds.has(id)) {
+        categoriaEspansa = parentDiCategoria(id);
+        ridisegnaNav();
+      }
+    }
+    // Evidenzia il bottone attivo: se è un figlio e il parent non è espanso, evidenzia il parent
+    const parentId = parentDiCategoria(id);
+    document.querySelectorAll('#tabs-cat button[data-cat]').forEach(b => {
+      const bCat = b.dataset.cat;
+      let on = false;
+      if (bCat === id) on = true; // match diretto (sottocategoria o standalone)
+      else if (bCat === parentId && !categoriaEspansa) on = true; // parent evidenziato se non espanso
+      else if (bCat === parentId && categoriaEspansa === parentId) on = false; // parent espanso: evidenzia il figlio
+      b.classList.toggle('on', on);
       if (on && !document.body.classList.contains('cat-left')) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     });
     aggiornaRuota();
@@ -777,14 +955,12 @@ function aggiornaRuota() {
   const N = btns.length; if (!N) return;
   let att = btns.findIndex(b => b.classList.contains('on'));
   if (att < 0) att = 0;
-  const VISIBILI = 4;        // quante categorie mostrare sopra e sotto l'attiva
+  const VISIBILI = 5;        // quante categorie mostrare sopra e sotto l'attiva
   const centro = nav.clientHeight / 2;
-  const semialtezza = centro - 6;  // spazio utile da centro a bordo
+  const semialtezza = centro - 4;  // spazio utile da centro a bordo
   // --- FISHEYE: al centro grande e spaziata, verso i bordi piccola e compressa ---
-  // posizione: n in [0..1]; warp concavo (pow < 1) -> gli elementi si stringono vicino al bordo
-  const POS_EXP = 0.62;
-  // dimensione: 1 al centro, crolla verso il bordo (la lontananza si sente al limite)
-  const FONT_MAX = 23, FONT_MIN = 10.5, H_MAX = 88, H_MIN = 22;
+  const POS_EXP = 0.55;
+  const FONT_MAX = 18, FONT_MIN = 10, H_MAX = 62, H_MIN = 20;
   btns.forEach((b, i) => {
     let d = ((i - att) % N + N) % N;   // 0..N-1
     if (d > N / 2) d -= N;             // distanza ciclica con segno
@@ -793,8 +969,11 @@ function aggiornaRuota() {
     const n = ad / VISIBILI;                 // 0 (centro) .. 1 (bordo)
     const warp = Math.pow(n, POS_EXP);       // posizione fisheye
     const peso = 1 - Math.pow(n, 1.45);      // 1 al centro -> 0 al bordo, calo marcato sul finale
-    b.style.fontSize = (FONT_MIN + (FONT_MAX - FONT_MIN) * peso).toFixed(2) + 'px';
-    b.style.minHeight = (H_MIN + (H_MAX - H_MIN) * peso).toFixed(1) + 'px';
+    const isSub = b.classList.contains('sub-cat');
+    const fMax = isSub ? FONT_MAX * 0.75 : FONT_MAX;
+    const hMax = isSub ? H_MAX * 0.68 : H_MAX;
+    b.style.fontSize = (FONT_MIN + (fMax - FONT_MIN) * peso).toFixed(2) + 'px';
+    b.style.minHeight = (H_MIN + (hMax - H_MIN) * peso).toFixed(1) + 'px';
     b.style.top = (centro + Math.sign(d) * warp * semialtezza) + 'px';
     b.style.zIndex = String(50 - ad);
     b.style.pointerEvents = '';
