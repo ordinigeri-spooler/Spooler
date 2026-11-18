@@ -1015,8 +1015,7 @@
       <img id="categoria-immagine-preview" class="img-preview">
       <button type="button" class="danger" style="width:100%; margin-top:6px; padding:6px; font-size:12px;" onclick="eliminaImmagineDelCampo('categoria-immagine-preview','categoria-immagine', async () => { const id = document.getElementById('categoria-id').value; if (id) { await sbClient.from('categorie').update({ immagine_url: null }).eq('id', id); await caricaCategorie(); } })">🗑 Rimuovi immagine</button>
 
-      <label for="categoria-ordine">Ordine di visualizzazione</label>
-      <input type="number" id="categoria-ordine" value="0">
+      <input type="hidden" id="categoria-ordine" value="0">
 
       <label for="categoria-stampante">Stampante di reparto</label>
       <select id="categoria-stampante">
@@ -1756,6 +1755,9 @@ const ICONE_CATEGORIA_BASE64 = {
     document.getElementById('modal-categoria-title').textContent = 'Nuova categoria';
     document.getElementById('categoria-personalizza-colori').checked = false;
     document.getElementById('blocco-colori-categoria').style.display = 'none';
+    // Ordine automatico: dopo l'ultima categoria esistente
+    const maxOrdine = categorieCache.reduce((max, c) => Math.max(max, c.ordine_visualizzazione || 0), -1);
+    document.getElementById('categoria-ordine').value = maxOrdine + 1;
     renderChecklistGruppiCategoria([]);
     clearMsg('categoria-msg');
     openModal('modal-categoria');
@@ -2631,6 +2633,8 @@ const ICONE_CATEGORIA_BASE64 = {
     document.getElementById('modal-categoria-title').textContent = 'Nuova sotto-categoria';
     document.getElementById('categoria-personalizza-colori').checked = false;
     document.getElementById('blocco-colori-categoria').style.display = 'none';
+    const maxOrdine = categorieCache.reduce((max, c) => Math.max(max, c.ordine_visualizzazione || 0), -1);
+    document.getElementById('categoria-ordine').value = maxOrdine + 1;
     renderChecklistGruppiCategoria([]);
     clearMsg('categoria-msg');
     // Pre-seleziona la categoria padre
