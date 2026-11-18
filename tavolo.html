@@ -21,7 +21,7 @@
   body { min-height: 100vh; padding-bottom: var(--spazio-fondo, calc(150px + env(safe-area-inset-bottom))); }
   h1, h2, h3 { margin: 0; font-family: 'Baloo 2', 'Segoe UI', sans-serif; line-height: 1.15; }
   button { font: inherit; cursor: pointer; border: 0; }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 8px; }
   .hidden { display: none !important; }
 
   /* testata */
@@ -120,8 +120,8 @@
   }
 
   /* categorie — in alto (default) */
-  nav.cat { position: sticky; top: calc(68px + env(safe-area-inset-top)); z-index: 10; background: var(--bg); padding: 10px 0 8px; margin: 0 -16px; }
-  nav.cat .scroll { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; }
+  nav.cat { position: sticky; top: calc(68px + env(safe-area-inset-top)); z-index: 10; background: var(--bg); padding: 10px 0 8px; margin: 0 -8px; }
+  nav.cat .scroll { display: flex; gap: 8px; overflow-x: auto; padding: 0 8px; scrollbar-width: none; }
   nav.cat .scroll::-webkit-scrollbar { display: none; }
   nav.cat button { white-space: nowrap; padding: 9px 16px; border-radius: 99px; background: rgba(224,163,48,.14); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1.5px solid rgba(224,163,48,.32); color: #9a6a12; font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 14px; }
   nav.cat button.on { background: #e0a330; border-color: #e0a330; color: #fff; box-shadow: 0 6px 16px rgba(224,163,48,.4); }
@@ -328,7 +328,7 @@
   }
 
   /* griglia prodotti — PLU senza cornice, fusi col background */
-  .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 12px; }
+  .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px 10px; }
   .prodotto { display: flex; flex-direction: column; background: transparent; border: 0; border-radius: 0; padding: 0; cursor: pointer; position: relative; z-index: 2; }
   section.categoria h3 { position: relative; z-index: 2; }
   .prodotto .media { position: relative; width: 100%; }
@@ -415,11 +415,11 @@
   }
 
   /* categorie — a sinistra (body.cat-left): rail verticale grande e moderno */
-  body.cat-left #sotto-ordina { display: flex; gap: 14px; align-items: flex-start; }
+  body.cat-left #sotto-ordina { display: flex; gap: 8px; align-items: flex-start; }
   /* COLONNA categorie — lista scrollabile, sfondo trasparente */
   body.cat-left nav.cat {
     position: sticky; top: calc(72px + env(safe-area-inset-top)); z-index: 10;
-    flex: 0 0 120px; margin: 0; padding: 0; align-self: flex-start;
+    flex: 0 0 110px; margin: 0; padding: 0; align-self: flex-start;
     height: calc(100dvh - 150px);
     background: transparent;
     overflow: hidden;
@@ -440,7 +440,7 @@
     white-space: normal; text-align: center; font-family: 'Baloo 2', sans-serif;
     font-size: 14px; font-weight: 700; line-height: 1.15;
     word-break: break-word; hyphens: auto;
-    padding: 8px 6px; margin: 0 4px;
+    padding: 8px 4px; margin: 0 2px;
     border: 1px solid rgba(255,255,255,.65); border-radius: 16px;
     background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
     box-shadow: 0 3px 10px rgba(93,151,201,.3), inset 0 1px 0 rgba(255,255,255,.9);
@@ -487,7 +487,7 @@
   nav.cat .cat-gruppo { display: none; }
   body.cat-left #lista-prodotti { flex: 1; min-width: 0; position: relative; }
   /* colonna categorie -> prodotti a 2 colonne */
-  body.cat-left .griglia { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px 8px; }
+  body.cat-left .griglia { grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap: 10px 6px; }
   body.cat-left .prodotto { transform-origin: center center; will-change: transform, opacity; }
   body.cat-left .prodotto .nome { font-size: 13px; }
   body.cat-left .prodotto .foto, body.cat-left .prodotto .foto-vuota { border-radius: 16px; }
@@ -543,12 +543,12 @@
   }
   .barra {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
     background: linear-gradient(to top, var(--bg) 70%, transparent);
     animation: barraSlide .4s cubic-bezier(.22,1,.36,1);
   }
   .barra button {
-    max-width: 608px; margin: 0 auto; display: flex; width: 100%;
+    max-width: 704px; margin: 0 auto; display: flex; width: 100%;
     align-items: center; justify-content: space-between;
     background: linear-gradient(135deg, var(--verde) 0%, #2a4a18 100%);
     color: #fff; border-radius: 16px; padding: 15px 20px;
@@ -572,14 +572,14 @@
   /* barra strumenti sempre visibile in basso (ricerca + viste + allergeni) */
   .barra-strumenti {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 29;
-    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
     background: rgba(247,238,203,.82);
     -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
     display: flex; flex-direction: column; gap: 8px;
     box-shadow: 0 -4px 24px rgba(70,56,20,.08);
     border-top: 1px solid rgba(255,255,255,.5);
   }
-  .barra-strumenti > * { max-width: 608px; margin-left: auto; margin-right: auto; width: 100%; }
+  .barra-strumenti > * { max-width: 704px; margin-left: auto; margin-right: auto; width: 100%; }
   .cerca-box {
     display: flex; align-items: center; gap: 8px;
     background: rgba(255,255,255,.85); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
