@@ -422,10 +422,21 @@
         <select id="filtro-categoria-prodotti" style="max-width:280px;">
           <option value="">Tutte le categorie</option>
         </select>
+        <button id="btn-modalita-sposta" class="secondary" style="font-size:12px; padding:6px 12px; display:none;">📦 Sposta in altra categoria</button>
         <input type="text" id="ricerca-prodotti" placeholder="🔍 Cerca prodotto..." style="max-width:280px;">
         <label style="margin-left:auto; display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; white-space:nowrap; color:var(--ink-dim);">
           <input type="checkbox" id="mostra-inattivi" style="width:16px; height:16px;"> Visualizza inattivi
         </label>
+      </div>
+      <!-- Barra spostamento prodotti -->
+      <div id="barra-sposta-prodotti" style="display:none; background:var(--panel-2); border:2px solid var(--accent); border-radius:10px; padding:14px; margin-bottom:16px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+          <label style="margin:0; font-weight:600; font-size:14px;">Sposta i prodotti selezionati in:</label>
+          <select id="sposta-categoria-destinazione" style="max-width:280px;"></select>
+          <button id="btn-conferma-sposta" class="primary" style="font-size:13px; padding:6px 16px;">✅ Conferma spostamento</button>
+          <button id="btn-annulla-sposta" class="secondary" style="font-size:13px; padding:6px 16px;">Annulla</button>
+        </div>
+        <p style="margin:0; font-size:12px; color:var(--ink-dim);">Spunta i prodotti da spostare, poi scegli la categoria di destinazione e conferma.</p>
       </div>
       <p id="suggerimento-trascina-prodotti" style="display:none; font-size:12px; color:var(--ink-dim); margin-top:-10px; margin-bottom:14px;">💡 Trascina i prodotti (⠿) per cambiarne l'ordine in questa categoria.</p>
       <div id="lista-prodotti"></div>
@@ -1972,6 +1983,7 @@ const ICONE_CATEGORIA_BASE64 = {
       return `
       <div class="list-item" ${trascinabile ? `draggable="true" data-id="${p.id}" style="cursor:grab;${!p.attivo ? ' border:2px solid var(--error); border-radius:10px;' : ''}"` : !p.attivo ? 'style="border:2px solid var(--error); border-radius:10px;"' : ''}>
         <div class="item-main">
+          ${modalitaSpostaAttiva ? `<input type="checkbox" class="chk-sposta-prodotto" value="${p.id}" style="width:20px; height:20px; margin-right:6px; cursor:pointer;" onclick="event.stopPropagation()">` : ''}
           ${trascinabile ? '<span style="color:var(--ink-dim); font-size:18px; margin-right:2px; user-select:none;">⠿</span>' : ''}
           ${p.immagine_url ? `<img src="${p.immagine_url}" alt="">` : ''}
           <div class="item-info">
@@ -2001,6 +2013,62 @@ const ICONE_CATEGORIA_BASE64 = {
       input.addEventListener('blur', () => salvaPrezzoVeloce(input));
     });
   }
+
+  // ================= SPOSTAMENTO PRODOTTI TRA CATEGORIE =================
+  let modalitaSpostaAttiva = false;
+
+  function chiudiModalitaSposta() {
+    modalitaSpostaAttiva = false;
+    document.getElementById('barra-sposta-prodotti').style.display = 'none';
+    renderProdotti();
+  }
+
+  document.getElementById('btn-modalita-sposta').addEventListener('click', () => {
+    modalitaSpostaAttiva = true;
+    document.getElementById('barra-sposta-prodotti').style.display = 'block';
+    // Popola il select destinazione con tutte le categorie tranne quella attuale
+    const categoriaCorrente = document.getElementById('filtro-categoria-prodotti').value;
+    const albero = categorieOrdineAlbero();
+    const selDest = document.getElementById('sposta-categoria-destinazione');
+    selDest.innerHTML = albero
+      .filter(({ cat }) => cat.id !== categoriaCorrente)
+      .map(({ cat, livello }) => `<option value="${cat.id}">${livello > 0 ? '↳ ' : ''}${escapeHtml(cat.nome)}</option>`)
+      .join('');
+    renderProdotti();
+  });
+
+  document.getElementById('btn-annulla-sposta').addEventListener('click', chiudiModalitaSposta);
+
+  document.getElementById('btn-conferma-sposta').addEventListener('click', async () => {
+    const selezionati = Array.from(document.querySelectorAll('.chk-sposta-prodotto:checked')).map(el => el.value);
+    if (!selezionati.length) { alert('Seleziona almeno un prodotto da spostare.'); return; }
+    const destinazione = document.getElementById('sposta-categoria-destinazione').value;
+    if (!destinazione) { alert('Scegli una categoria di destinazione.'); return; }
+    const nomeDest = categorieCache.find(c => c.id === destinazione)?.nome || '';
+    if (!confirm(`Spostare ${selezionati.length} prodott${selezionati.length === 1 ? 'o' : 'i'} in "${nomeDest}"?`)) return;
+
+    const btn = document.getElementById('btn-conferma-sposta');
+    btn.disabled = true;
+    btn.textContent = 'Spostamento...';
+
+    try {
+      // Calcola il prossimo ordine nella categoria di destinazione
+      let ordine = prodottiCache
+        .filter(p => p.categoria_id === destinazione)
+        .reduce((max, p) => Math.max(max, p.ordine_visualizzazione || 0), -1) + 1;
+
+      for (const prodottoId of selezionati) {
+        await sbClient.from('prodotti').update({ categoria_id: destinazione, ordine_visualizzazione: ordine++ }).eq('id', prodottoId);
+      }
+      chiudiModalitaSposta();
+      await caricaProdotti();
+    } catch (err) {
+      alert('Errore: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✅ Conferma spostamento';
+    }
+  });
 
   async function salvaPrezzoVeloce(input) {
     const prodottoId = input.dataset.id;
@@ -2206,7 +2274,13 @@ const ICONE_CATEGORIA_BASE64 = {
     }
   }
 
-  document.getElementById('filtro-categoria-prodotti').addEventListener('change', renderProdotti);
+  document.getElementById('filtro-categoria-prodotti').addEventListener('change', () => {
+    renderProdotti();
+    const filtroId = document.getElementById('filtro-categoria-prodotti').value;
+    document.getElementById('btn-modalita-sposta').style.display = filtroId ? '' : 'none';
+    // Se cambi categoria, esci dalla modalità spostamento
+    chiudiModalitaSposta();
+  });
 
   function calcolaProssimoOrdineProdotto(categoriaId) {
     const prodottiCategoria = prodottiCache.filter(p => p.categoria_id === categoriaId);
