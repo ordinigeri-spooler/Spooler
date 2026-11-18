@@ -76,6 +76,93 @@
   nav.cat button.has-children.espanso::after { content: '▴'; }
   section.categoria h3 { font-size: 21px; margin: 18px 0 8px; scroll-margin-top: 130px; }
 
+  /* === STILI BOTTONI CATEGORIE === */
+
+  /* STILE 2: COLORFUL — bordi scuri, colori pieni, retro vivace */
+  .cat-style-colorful nav.cat button {
+    background: #fff; color: #333; border: 2.5px solid #2c3e50; border-radius: 99px; font-weight: 800;
+    box-shadow: 0 3px 0 #2c3e50;
+  }
+  .cat-style-colorful nav.cat button.on {
+    background: #3498db; color: #fff; border-color: #1a5276;
+    box-shadow: 0 3px 0 #1a5276;
+  }
+  .cat-style-colorful nav.cat button.sub-cat {
+    background: #fdebd0; color: #7d4e00; border-color: #b7791f;
+    box-shadow: 0 2px 0 #b7791f;
+  }
+  .cat-style-colorful nav.cat button.sub-cat.on {
+    background: #e0a330; color: #fff; border-color: #8a6414;
+    box-shadow: 0 2px 0 #8a6414;
+  }
+  .cat-style-colorful.cat-left nav.cat button {
+    border-radius: 16px; box-shadow: 0 3px 0 #2c3e50;
+  }
+  .cat-style-colorful.cat-left nav.cat button::after { display: none; }
+
+  /* STILE 3: CHROME — metallico argentato con bordo blu */
+  .cat-style-chrome nav.cat button {
+    background: linear-gradient(180deg, #f0f0f0 0%, #c8c8c8 40%, #e0e0e0 60%, #b0b0b0 100%);
+    color: #333; border: 2px solid #6688aa; border-radius: 99px; font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.8);
+    text-shadow: 0 1px 0 rgba(255,255,255,.6);
+  }
+  .cat-style-chrome nav.cat button.on {
+    background: linear-gradient(180deg, #aad4f0 0%, #5a9ec9 40%, #7cb8dd 60%, #4a88b4 100%);
+    color: #fff; border-color: #3a6a90; text-shadow: 0 1px 2px rgba(0,0,0,.3);
+    box-shadow: 0 3px 10px rgba(70,120,170,.4), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .cat-style-chrome nav.cat button.sub-cat {
+    background: linear-gradient(180deg, #f8f0d8 0%, #d8c8a0 40%, #e8dcc0 60%, #c8b888 100%);
+    color: #5a4a1a; border-color: #a08840;
+  }
+  .cat-style-chrome nav.cat button.sub-cat.on {
+    background: linear-gradient(180deg, #f0d060 0%, #c8a020 40%, #e0c040 60%, #b09018 100%);
+    color: #fff; border-color: #8a6a10;
+  }
+  .cat-style-chrome.cat-left nav.cat button { border-radius: 20px; }
+  .cat-style-chrome.cat-left nav.cat button::after { display: none; }
+
+  /* STILE 4: GLOSSY — nero/scuro lucido con highlight in alto */
+  .cat-style-glossy nav.cat button {
+    background: linear-gradient(180deg, #555 0%, #222 45%, #333 55%, #111 100%);
+    color: #eee; border: 1.5px solid #555; border-radius: 10px; font-weight: 700;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.15);
+  }
+  .cat-style-glossy nav.cat button.on {
+    background: linear-gradient(180deg, #6aaed6 0%, #2a7ab5 45%, #3a8cc5 55%, #1a6aa0 100%);
+    color: #fff; border-color: #1a5a90;
+    box-shadow: 0 4px 14px rgba(40,110,180,.5), inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  .cat-style-glossy nav.cat button.sub-cat {
+    background: linear-gradient(180deg, #6a5a30 0%, #3a3018 45%, #4a3a20 55%, #2a2010 100%);
+    color: #f0d888; border-color: #6a5520;
+  }
+  .cat-style-glossy nav.cat button.sub-cat.on {
+    background: linear-gradient(180deg, #e8b830 0%, #b88a10 45%, #d0a020 55%, #a07808 100%);
+    color: #fff; border-color: #8a6a10;
+  }
+  .cat-style-glossy.cat-left nav.cat button { border-radius: 14px; }
+  .cat-style-glossy.cat-left nav.cat button::after { display: none; }
+
+  /* STILE 5: FLAT — bianco pulito con bordo sottile colorato */
+  .cat-style-flat nav.cat button {
+    background: #fff; color: #2c5f8a; border: 1.5px solid #6aade0; border-radius: 8px; font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .cat-style-flat nav.cat button.on {
+    background: #2c7fcc; color: #fff; border-color: #2c7fcc;
+    box-shadow: 0 2px 8px rgba(44,127,204,.35);
+  }
+  .cat-style-flat nav.cat button.sub-cat {
+    background: #fffbf0; color: #7a5a10; border-color: #d4a84a;
+  }
+  .cat-style-flat nav.cat button.sub-cat.on {
+    background: #e0a330; color: #fff; border-color: #e0a330;
+  }
+  .cat-style-flat.cat-left nav.cat button { border-radius: 12px; }
+  .cat-style-flat.cat-left nav.cat button::after { display: none; }
+
   /* griglia prodotti — PLU senza cornice, fusi col background */
   .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 12px; }
   .prodotto { display: flex; flex-direction: column; background: transparent; border: 0; border-radius: 0; padding: 0; cursor: pointer; position: relative; z-index: 2; }
@@ -491,11 +578,16 @@ async function caricaInfo() {
   return info;
 }
 async function caricaLocale() {
-  const { data } = await sb.from('impostazioni_locale').select('nome_locale, logo_url, categorie_laterali, sfondo_url').eq('tenant_id', TENANT).maybeSingle();
+  const { data } = await sb.from('impostazioni_locale').select('nome_locale, logo_url, categorie_laterali, stile_categorie, sfondo_url').eq('tenant_id', TENANT).maybeSingle();
   if (data) {
     if (data.nome_locale) { $('nome-locale').textContent = data.nome_locale; document.title = data.nome_locale + ' — Tavolo ' + TAVOLO; }
     if (data.logo_url) { $('logo').src = data.logo_url; $('logo').classList.remove('hidden'); }
     document.body.classList.toggle('cat-left', !!data.categorie_laterali);
+    // Stile bottoni categorie
+    ['cat-style-colorful','cat-style-chrome','cat-style-glossy','cat-style-flat'].forEach(c => document.body.classList.remove(c));
+    if (data.stile_categorie && data.stile_categorie !== 'glass') {
+      document.body.classList.add('cat-style-' + data.stile_categorie);
+    }
     if (data.sfondo_url) {
       // foto di sfondo piena; il faro la schiarisce dietro le card (card e scritte restano davanti)
       document.body.classList.add('con-sfondo');
