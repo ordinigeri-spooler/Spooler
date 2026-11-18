@@ -1641,7 +1641,8 @@ const ICONE_CATEGORIA_BASE64 = {
       .from('categorie')
       .select('*')
       .eq('tenant_id', currentTenantId)
-      .order('ordine_visualizzazione');
+      .order('ordine_visualizzazione')
+      .order('created_at');
 
     if (error) { console.error(error); return; }
     categorieCache = data || [];
@@ -5005,6 +5006,7 @@ const ICONE_CATEGORIA_BASE64 = {
   function abilitaTrascinamento(contenitoreId, ottieniArray, dopoRiordino, condizioneAttiva) {
     const cont = document.getElementById(contenitoreId);
     let dragSrcId = null;
+    let ultimoMetaSopra = true;
 
     // Crea indicatore visivo di posizionamento
     const indicatore = document.createElement('div');
@@ -5013,10 +5015,6 @@ const ICONE_CATEGORIA_BASE64 = {
     function rimuoviIndicatore() {
       indicatore.style.opacity = '0';
       if (indicatore.parentNode) indicatore.parentNode.removeChild(indicatore);
-      cont.querySelectorAll('.list-item').forEach(el => {
-        el.style.borderTop = '';
-        el.style.borderBottom = '';
-      });
     }
 
     cont.addEventListener('dragstart', (e) => {
@@ -5046,12 +5044,11 @@ const ICONE_CATEGORIA_BASE64 = {
         rimuoviIndicatore();
         return;
       }
-      // Calcola se il mouse è nella metà superiore o inferiore dell'elemento
       const rect = targetItem.getBoundingClientRect();
-      const metaSopra = e.clientY < rect.top + rect.height / 2;
+      ultimoMetaSopra = e.clientY < rect.top + rect.height / 2;
       rimuoviIndicatore();
       indicatore.style.opacity = '1';
-      if (metaSopra) {
+      if (ultimoMetaSopra) {
         targetItem.parentNode.insertBefore(indicatore, targetItem);
       } else {
         targetItem.parentNode.insertBefore(indicatore, targetItem.nextSibling);
@@ -5078,7 +5075,16 @@ const ICONE_CATEGORIA_BASE64 = {
       if (fromIdx === -1 || toIdx === -1) return;
 
       const [spostato] = array.splice(fromIdx, 1);
-      array.splice(toIdx, 0, spostato);
+      // Calcola posizione corretta in base a direzione e metà sopra/sotto
+      let insertIdx;
+      if (fromIdx < toIdx) {
+        // Trascinamento verso il basso: dopo splice, gli indici sono scalati di -1
+        insertIdx = ultimoMetaSopra ? toIdx - 1 : toIdx;
+      } else {
+        // Trascinamento verso l'alto
+        insertIdx = ultimoMetaSopra ? toIdx : toIdx + 1;
+      }
+      array.splice(insertIdx, 0, spostato);
 
       dopoRiordino();
 
