@@ -131,12 +131,12 @@
 
   /* categorie — a sinistra (body.cat-left): rail verticale grande e moderno */
   body.cat-left #sotto-ordina { display: flex; gap: 14px; align-items: flex-start; }
-  /* RUOTA categorie infinita: l'attiva grande al centro, le altre a scalare sopra/sotto,
-     e l'anello gira avanti e indietro (dopo l'ultima torna la prima e viceversa) */
+  /* RUOTA categorie LINEARE: l'attiva grande al centro, le altre a scalare sopra/sotto */
   body.cat-left nav.cat {
     position: sticky; top: calc(72px + env(safe-area-inset-top)); z-index: 10;
     flex: 0 0 116px; margin: 0; padding: 0; align-self: flex-start; overflow: hidden;
     height: calc(100dvh - 150px); background: transparent;
+    touch-action: none; /* gestiamo noi il touch */
   }
   body.cat-left nav.cat .scroll {
     position: relative; display: block; height: 100%; padding: 0;
@@ -152,7 +152,7 @@
     background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
     box-shadow: 0 4px 12px rgba(93,151,201,.35), inset 0 1px 0 rgba(255,255,255,.9);
     overflow: visible;
-    transition: top .38s cubic-bezier(.2,.85,.25,1), font-size .38s cubic-bezier(.2,.85,.25,1), min-height .38s cubic-bezier(.2,.85,.25,1), opacity .3s ease, background .3s ease, box-shadow .3s ease, color .3s ease;
+    transition: top .5s cubic-bezier(.25,.9,.3,1), font-size .5s cubic-bezier(.25,.9,.3,1), min-height .5s cubic-bezier(.25,.9,.3,1), opacity .4s ease, background .35s ease, box-shadow .35s ease, color .35s ease, left .4s ease, right .4s ease;
   }
   /* sottocategoria nel nav: più piccola, più a destra, sfondo diverso */
   body.cat-left nav.cat button.sub-cat {
@@ -945,8 +945,8 @@ function osservaCategorie() {
   document.querySelectorAll('section.categoria').forEach(s => osservatore.observe(s));
 }
 
-// RUOTA categorie infinita: l'attiva grande al centro, le altre a scalare sopra/sotto;
-// l'anello è ciclico (sopra la prima riappare l'ultima e viceversa).
+// RUOTA categorie LINEARE: l'attiva grande al centro, le altre a scalare sopra/sotto;
+// dopo l'ultima non appare la prima e viceversa: c'è un inizio e una fine chiari.
 function aggiornaRuota() {
   const nav = document.querySelector('body.cat-left nav.cat');
   if (!nav) return;
@@ -962,8 +962,7 @@ function aggiornaRuota() {
   const POS_EXP = 0.55;
   const FONT_MAX = 18, FONT_MIN = 10, H_MAX = 62, H_MIN = 20;
   btns.forEach((b, i) => {
-    let d = ((i - att) % N + N) % N;   // 0..N-1
-    if (d > N / 2) d -= N;             // distanza ciclica con segno
+    const d = i - att;                       // distanza LINEARE con segno (non ciclica)
     const ad = Math.abs(d);
     if (ad > VISIBILI) { b.style.opacity = '0'; b.style.pointerEvents = 'none'; return; }
     const n = ad / VISIBILI;                 // 0 (centro) .. 1 (bordo)
@@ -1005,6 +1004,50 @@ function fisheyeProdotti() {
 let rafFaro = 0;
 window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(fisheyeProdotti); }, { passive: true });
 window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); aggiornaStrumenti(); });
+
+// --- TOUCH/SWIPE sulla ruota categorie ---
+(function() {
+  let touchY0 = null, touchMoved = false;
+  const SOGLIA = 30; // px per considerare uno swipe
+  document.addEventListener('touchstart', function(e) {
+    const nav = e.target.closest('body.cat-left nav.cat');
+    if (!nav) return;
+    touchY0 = e.touches[0].clientY;
+    touchMoved = false;
+  }, { passive: true });
+  document.addEventListener('touchmove', function(e) {
+    if (touchY0 === null) return;
+    const nav = e.target.closest('body.cat-left nav.cat');
+    if (!nav) return;
+    touchMoved = true;
+    e.preventDefault(); // blocca lo scroll della pagina dentro il nav
+  }, { passive: false });
+  document.addEventListener('touchend', function(e) {
+    if (touchY0 === null) return;
+    const nav = e.target.closest('body.cat-left nav.cat');
+    if (!nav) { touchY0 = null; return; }
+    const dy = e.changedTouches[0].clientY - touchY0;
+    touchY0 = null;
+    if (!touchMoved || Math.abs(dy) < SOGLIA) return;
+    // Swipe verso l'alto (dy < 0) = avanti, verso il basso (dy > 0) = indietro
+    const strip = nav.querySelector('.scroll');
+    if (!strip) return;
+    const btns = [...strip.querySelectorAll('button')];
+    const N = btns.length; if (!N) return;
+    let att = btns.findIndex(b => b.classList.contains('on'));
+    if (att < 0) att = 0;
+    const passo = Math.min(Math.round(Math.abs(dy) / 60), 3) || 1; // swipe lungo = più passi
+    let nuova = dy < 0 ? att + passo : att - passo;
+    nuova = Math.max(0, Math.min(N - 1, nuova)); // LINEARE: clamp, non wrap
+    if (nuova === att) return;
+    const btn = btns[nuova];
+    if (btn) {
+      const scrollId = btn.dataset.vai;
+      const el = document.getElementById('cat-' + scrollId);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, { passive: true });
+})();
 
 // ---------- filtro allergeni ----------
 function aggiornaBarraFiltri() {
