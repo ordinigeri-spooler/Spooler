@@ -1641,8 +1641,7 @@ const ICONE_CATEGORIA_BASE64 = {
       .from('categorie')
       .select('*')
       .eq('tenant_id', currentTenantId)
-      .order('ordine_visualizzazione')
-      .order('created_at');
+      .order('ordine_visualizzazione');
 
     if (error) { console.error(error); return; }
     categorieCache = data || [];
@@ -1932,8 +1931,7 @@ const ICONE_CATEGORIA_BASE64 = {
       .from('prodotti')
       .select('*, categorie(nome), prodotti_opzioni_variazione(opzione_variazione_id), prodotti_allergeni(allergene_id)')
       .eq('tenant_id', currentTenantId)
-      .order('ordine_visualizzazione')
-      .order('created_at');
+      .order('ordine_visualizzazione');
 
     if (error) { console.error(error); return; }
     prodottiCache = data || [];
