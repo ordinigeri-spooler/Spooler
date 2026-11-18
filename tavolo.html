@@ -139,14 +139,36 @@
   }
   body.cat-left nav.cat button {
     position: absolute; left: 3px; right: 3px; top: 50%; transform: translateY(-50%);
-    min-height: 58px; display: flex; align-items: center; justify-content: center;
-    white-space: normal; text-align: center; font-size: 13px; font-weight: 800; line-height: 1.08;
-    padding: 6px 5px; border: 1px solid rgba(255,255,255,.65); border-radius: 22px;
+    min-height: 48px; display: flex; align-items: center; justify-content: center;
+    white-space: normal; text-align: center; font-family: 'Baloo 2', sans-serif;
+    font-size: 13px; font-weight: 700; line-height: 1.12;
+    word-break: break-word; hyphens: auto;
+    padding: 5px 6px; border: 1px solid rgba(255,255,255,.65); border-radius: 18px;
     background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
-    box-shadow: 0 6px 15px rgba(93,151,201,.4), inset 0 1px 0 rgba(255,255,255,.9);
-    overflow: hidden;
-    transition: top .42s cubic-bezier(.2,.85,.25,1), font-size .42s cubic-bezier(.2,.85,.25,1), min-height .42s cubic-bezier(.2,.85,.25,1), opacity .35s ease, background .3s ease, box-shadow .3s ease, color .3s ease;
+    box-shadow: 0 4px 12px rgba(93,151,201,.35), inset 0 1px 0 rgba(255,255,255,.9);
+    overflow: visible;
+    transition: top .38s cubic-bezier(.2,.85,.25,1), font-size .38s cubic-bezier(.2,.85,.25,1), min-height .38s cubic-bezier(.2,.85,.25,1), opacity .3s ease, background .3s ease, box-shadow .3s ease, color .3s ease;
   }
+  /* sottocategoria nel nav: più piccola, sfondo diverso */
+  body.cat-left nav.cat button.sub-cat {
+    left: 12px; right: 12px;
+    background: linear-gradient(150deg, #fff8e6 0%, #f5e8c4 100%);
+    border-color: rgba(224,163,48,.4);
+    color: #6a4d0a; font-weight: 600;
+    box-shadow: 0 3px 8px rgba(224,163,48,.25), inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  body.cat-left nav.cat button.sub-cat.on {
+    background: linear-gradient(150deg, #f0c858 0%, #e0a330 100%); color: #fff;
+    box-shadow: 0 8px 20px rgba(224,163,48,.5), inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  /* parent con figli: indicatore espandi */
+  body.cat-left nav.cat button.has-children::after {
+    content: '▾'; position: absolute; right: 6px; bottom: 2px; font-size: 10px; opacity: .5;
+    font-family: system-ui; pointer-events: none; border-radius: 0; background: none;
+    width: auto; height: auto; transform: none; top: auto; left: auto;
+    filter: none;
+  }
+  body.cat-left nav.cat button.has-children.espanso::after { content: '▴'; opacity: .7; }
   body.cat-left nav.cat .cat-gruppo { display: none; }   /* ruota: niente fasce-gruppo inline nel rail */
   /* riflesso diagonale "glass" */
   body.cat-left nav.cat button::after {
@@ -417,6 +439,10 @@ let menuScelto = null;
 let timerConto = null;
 let allergeniEsclusi = new Set();   // id degli allergeni da nascondere
 let testoCerca = '';                // ricerca prodotto (minuscolo, senza accenti)
+let categoriaEspansa = null;       // ID del parent espanso nel nav (null = tutto chiuso)
+let navCats = [];                   // categorie visibili correnti (con prodotti)
+let navParentMap = new Map();       // parent_id -> [child cats]
+let navChildIds = new Set();        // set di id che sono figli
 
 // ---------- utilità ----------
 function mostra(vista) {
