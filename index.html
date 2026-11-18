@@ -1470,7 +1470,7 @@
   debugLogEarly('window.supabase disponibile: ' + (typeof window.supabase));
 
   // ================= CONFIGURAZIONE =================
-  const SUPABASE_URL = 'https://tsgxnsvwglhebgelwaxn.supabase.co'; // <-- URL del NUOVO progetto Supabase
+  const SUPABASE_URL = 'https://https://tsgxnsvwglhebgelwaxn.supabase.co.supabase.co'; // <-- URL del NUOVO progetto Supabase
   const SUPABASE_ANON_KEY = 'sb_publishable_RP3UQhYxOMGRHwHFssJstw_2nILJvrG'; // <-- Publishable/anon key del nuovo progetto
   const BUCKET = 'prodotti-immagini';
   // Chiave gratuita da https://www.pexels.com/api/ (iscrizione + generazione istantanea),
@@ -1664,15 +1664,43 @@ const ICONE_CATEGORIA_BASE64 = {
       cont.innerHTML = '<div class="empty-state">Nessuna categoria ancora. Creane una per iniziare.</div>';
       return;
     }
-    cont.innerHTML = categorieCache.map(cat => {
+    // Raggruppa le sottocategorie sotto la categoria padre
+    const figliDi = new Map(); // padre_id -> [sottocategorie]
+    const idFiglio = new Set();
+    for (const cat of categorieCache) {
+      if (cat.categoria_collegata_id) {
+        idFiglio.add(cat.id);
+        if (!figliDi.has(cat.categoria_collegata_id)) figliDi.set(cat.categoria_collegata_id, []);
+        figliDi.get(cat.categoria_collegata_id).push(cat);
+      }
+    }
+    // Ordine: categoria padre, poi le sue sottocategorie indentate, poi la prossima padre...
+    const ordinato = [];
+    for (const cat of categorieCache) {
+      if (idFiglio.has(cat.id)) continue;
+      ordinato.push({ cat, livello: 0 });
+      const sub = figliDi.get(cat.id);
+      if (sub) for (const s of sub) ordinato.push({ cat: s, livello: 1 });
+    }
+    // Eventuali orfani (padre non presente nella lista)
+    for (const cat of categorieCache) {
+      if (idFiglio.has(cat.id) && !ordinato.some(o => o.cat.id === cat.id)) {
+        ordinato.push({ cat, livello: 1 });
+      }
+    }
+
+    cont.innerHTML = ordinato.map(({ cat, livello }) => {
       const collegata = cat.categoria_collegata_id ? categorieCache.find(c => c.id === cat.categoria_collegata_id) : null;
+      const stileIndent = livello > 0
+        ? 'margin-left:36px; border-left:3px solid var(--accent, #b4441c); padding-left:14px;'
+        : '';
       return `
-      <div class="list-item" draggable="true" data-id="${cat.id}" style="cursor:grab;">
+      <div class="list-item" draggable="true" data-id="${cat.id}" style="cursor:grab; ${stileIndent}">
         <div class="item-main">
           <span style="color:var(--ink-dim); font-size:18px; margin-right:2px; user-select:none;">⠿</span>
           ${cat.immagine_url ? `<img src="${cat.immagine_url}" alt="">` : ''}
           <div class="item-info">
-            <div class="name">${escapeHtml(cat.nome)}</div>
+            <div class="name">${livello > 0 ? '↳ ' : ''}${escapeHtml(cat.nome)}</div>
             <div class="meta">${cat.descrizione ? escapeHtml(cat.descrizione) + ' · ' : ''}<span class="badge ${cat.attivo ? '' : 'off'}">${cat.attivo ? 'Attiva' : 'Disattiva'}</span>${collegata ? ` · <span class="badge">🔗 dentro "${escapeHtml(collegata.nome)}"</span>` : ''}</div>
           </div>
         </div>
