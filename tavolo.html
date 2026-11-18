@@ -131,33 +131,48 @@
 
   /* categorie — a sinistra (body.cat-left): rail verticale grande e moderno */
   body.cat-left #sotto-ordina { display: flex; gap: 14px; align-items: flex-start; }
-  /* RUOTA categorie LINEARE: l'attiva grande al centro, le altre a scalare sopra/sotto */
+  /* RUOTA categorie — SCROLL-SNAP NATIVO: il browser gestisce touch, momentum, snap */
   body.cat-left nav.cat {
     position: sticky; top: calc(72px + env(safe-area-inset-top)); z-index: 10;
-    flex: 0 0 116px; margin: 0; padding: 0; align-self: flex-start; overflow: hidden;
+    flex: 0 0 116px; margin: 0; padding: 0; align-self: flex-start;
     height: calc(100dvh - 150px); background: transparent;
-    touch-action: none; /* gestiamo noi il touch */
+    overflow: visible;
   }
   body.cat-left nav.cat .scroll {
-    position: relative; display: block; height: 100%; padding: 0;
+    display: flex; flex-direction: column; align-items: stretch;
+    height: 100%; overflow-y: auto; overflow-x: hidden;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
     background: transparent; border: 0; border-radius: 0; box-shadow: none;
+    padding: 0; gap: 6px;
+  }
+  body.cat-left nav.cat .scroll::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+  /* Spacer in cima e in fondo per permettere alla prima/ultima di arrivare al centro */
+  body.cat-left nav.cat .scroll .spacer-ruota {
+    flex-shrink: 0; pointer-events: none;
   }
   body.cat-left nav.cat button {
-    position: absolute; left: 3px; right: 3px; top: 50%; transform: translateY(-50%);
-    min-height: 48px; display: flex; align-items: center; justify-content: center;
+    position: relative; flex-shrink: 0;
+    scroll-snap-align: center;
+    height: 52px; min-height: 52px;
+    display: flex; align-items: center; justify-content: center;
     white-space: normal; text-align: center; font-family: 'Baloo 2', sans-serif;
-    font-size: 13px; font-weight: 700; line-height: 1.12;
+    font-size: 14px; font-weight: 700; line-height: 1.12;
     word-break: break-word; hyphens: auto;
-    padding: 5px 6px; border: 1px solid rgba(255,255,255,.65); border-radius: 18px;
+    padding: 5px 8px; margin: 0 3px;
+    border: 1px solid rgba(255,255,255,.65); border-radius: 18px;
     background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
     box-shadow: 0 4px 12px rgba(93,151,201,.35), inset 0 1px 0 rgba(255,255,255,.9);
     overflow: visible;
-    transition: top .8s cubic-bezier(.22,.85,.3,1), font-size .8s cubic-bezier(.22,.85,.3,1), min-height .8s cubic-bezier(.22,.85,.3,1), opacity .6s ease, background .5s ease, box-shadow .5s ease, color .5s ease, left .6s ease, right .6s ease;
+    transform-origin: center center;
+    transition: transform .18s ease-out, opacity .18s ease-out, background .3s ease, box-shadow .3s ease, color .3s ease;
   }
   /* sottocategoria nel nav: più piccola, più a destra, sfondo diverso */
   body.cat-left nav.cat button.sub-cat {
-    left: 18px; right: 6px;
-    border-radius: 14px;
+    margin-left: 16px; margin-right: 6px;
+    height: 44px; min-height: 44px;
+    border-radius: 14px; font-size: 13px;
     background: linear-gradient(150deg, #fff8e6 0%, #f5e8c4 100%);
     border-color: rgba(224,163,48,.4);
     color: #6a4d0a; font-weight: 600;
@@ -167,13 +182,13 @@
     background: linear-gradient(150deg, #f0c858 0%, #e0a330 100%); color: #fff;
     box-shadow: 0 8px 20px rgba(224,163,48,.5), inset 0 1px 0 rgba(255,255,255,.3);
   }
-  /* parent con figli: indicatore espandi (usa ::before dato che ::after è il riflesso glass) */
+  /* parent con figli: indicatore espandi */
   body.cat-left nav.cat button.has-children::before {
     content: '▾'; position: absolute; right: 5px; bottom: 1px; font-size: 9px; opacity: .45;
     font-family: system-ui; pointer-events: none;
   }
   body.cat-left nav.cat button.has-children.espanso::before { content: '▴'; opacity: .65; }
-  body.cat-left nav.cat .cat-gruppo { display: none; }   /* ruota: niente fasce-gruppo inline nel rail */
+  body.cat-left nav.cat .cat-gruppo { display: none; }
   /* riflesso diagonale "glass" */
   body.cat-left nav.cat button::after {
     content: ''; position: absolute; top: -40%; left: -30%; width: 90%; height: 60%;
@@ -184,18 +199,18 @@
     background: linear-gradient(150deg, #9cc6e8 0%, #5b97c9 100%); color: #fff; border-color: rgba(255,255,255,.4);
     box-shadow: 0 14px 30px rgba(74,130,180,.62), inset 0 1px 0 rgba(255,255,255,.45);
   }
-  /* SLOT centrale — cornice luminosa che indica dove "entra" la categoria attiva */
+  /* SLOT centrale — cornice luminosa al centro della ruota */
   body.cat-left nav.cat .slot-centro {
     position: absolute; left: 2px; right: 2px; top: 50%; transform: translateY(-50%);
-    height: 68px; border-radius: 20px; pointer-events: none; z-index: 0;
-    border: 2px solid rgba(93,151,201,.2);
-    background: radial-gradient(ellipse at center, rgba(93,151,201,.06) 0%, transparent 70%);
+    height: 60px; border-radius: 20px; pointer-events: none; z-index: 60;
+    border: 2px solid rgba(93,151,201,.18);
+    background: radial-gradient(ellipse at center, rgba(93,151,201,.05) 0%, transparent 70%);
     transition: border-color .3s, box-shadow .3s, background .3s;
   }
   body.cat-left nav.cat .slot-centro.attivo {
-    border-color: rgba(93,151,201,.55);
-    box-shadow: 0 0 18px rgba(93,151,201,.35), inset 0 0 12px rgba(93,151,201,.1);
-    background: radial-gradient(ellipse at center, rgba(93,151,201,.12) 0%, transparent 70%);
+    border-color: rgba(93,151,201,.5);
+    box-shadow: 0 0 16px rgba(93,151,201,.3), inset 0 0 10px rgba(93,151,201,.08);
+    background: radial-gradient(ellipse at center, rgba(93,151,201,.1) 0%, transparent 70%);
   }
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
