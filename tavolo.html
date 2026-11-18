@@ -98,13 +98,27 @@
   }
   .cat-style-colorful.cat-left nav.cat button { border-radius: 16px; }
   .cat-style-colorful.cat-left nav.cat button::after { display: none; }
+  /* COLORFUL — titoli */
   .cat-style-colorful section.categoria h3 {
-    color: #2c3e50; border-bottom: 2.5px solid #2c3e50; padding-bottom: 4px; display: inline-block;
+    color: #fff; background: #2c3e50; padding: 8px 16px; border-radius: 10px;
+    display: inline-block; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+    box-shadow: 0 3px 0 #1a252f;
+  }
+  /* COLORFUL — card prodotto */
+  .cat-style-colorful .prodotto {
+    background: #fff; border: 2.5px solid #2c3e50; border-radius: 18px;
+    box-shadow: 0 4px 0 #2c3e50; padding: 6px 6px 2px; overflow: hidden;
   }
   .cat-style-colorful .prodotto .foto, .cat-style-colorful .prodotto .foto-vuota {
-    border: 2.5px solid #2c3e50; border-radius: 16px;
+    border: 0; border-radius: 12px;
   }
-  .cat-style-colorful .prod-gruppo { background: #2c3e50; }
+  .cat-style-colorful .prodotto .testo-prod::before { display: none; }
+  .cat-style-colorful .prodotto .nome { color: #2c3e50; }
+  .cat-style-colorful .prodotto .piu { box-shadow: 0 4px 0 #a03020, 0 6px 12px rgba(226,96,79,.3); }
+  .cat-style-colorful .prod-gruppo {
+    background: #2c3e50; border-radius: 10px; box-shadow: 0 3px 0 #1a252f;
+    text-transform: uppercase; font-weight: 900;
+  }
 
   /* STILE 3: CHROME — metallico argentato con bordo blu */
   .cat-style-chrome nav.cat button {
@@ -128,17 +142,35 @@
   }
   .cat-style-chrome.cat-left nav.cat button { border-radius: 20px; }
   .cat-style-chrome.cat-left nav.cat button::after { display: none; }
+  /* CHROME — titoli */
   .cat-style-chrome section.categoria h3 {
-    color: #3a5a7a;
-    text-shadow: 0 1px 0 rgba(255,255,255,.6);
+    color: #333; display: inline-block; padding: 7px 18px; border-radius: 99px;
+    background: linear-gradient(180deg, #eee 0%, #c0c0c0 40%, #d8d8d8 60%, #aaa 100%);
+    border: 2px solid #6688aa;
+    box-shadow: 0 2px 6px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.8);
+    text-shadow: 0 1px 0 rgba(255,255,255,.7); font-weight: 800;
+  }
+  /* CHROME — card prodotto */
+  .cat-style-chrome .prodotto {
+    background: linear-gradient(180deg, #f4f4f4 0%, #d8d8d8 100%);
+    border: 2px solid #8899aa; border-radius: 20px; padding: 6px 6px 2px; overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.9);
   }
   .cat-style-chrome .prodotto .foto, .cat-style-chrome .prodotto .foto-vuota {
-    border: 2px solid #9ab0c8; border-radius: 18px;
-    box-shadow: 0 4px 12px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.5);
+    border: 2px solid #aabbcc; border-radius: 14px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.15);
+  }
+  .cat-style-chrome .prodotto .testo-prod::before { display: none; }
+  .cat-style-chrome .prodotto .nome { color: #2a3a4a; text-shadow: 0 1px 0 rgba(255,255,255,.6); }
+  .cat-style-chrome .prodotto .piu {
+    box-shadow: 0 2px 6px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.4);
+    border: 1px solid rgba(0,0,0,.15);
   }
   .cat-style-chrome .prod-gruppo {
-    background: linear-gradient(180deg, #bbb 0%, #888 100%);
-    border: 2px solid #6688aa; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.3);
+    background: linear-gradient(180deg, #ccc 0%, #999 100%);
+    border: 2px solid #6688aa; border-radius: 99px; color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,.4); font-weight: 900;
+    box-shadow: 0 2px 6px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.5);
   }
 
   /* STILE 4: GLOSSY — nero/scuro lucido con highlight in alto */
@@ -162,23 +194,38 @@
   }
   .cat-style-glossy.cat-left nav.cat button { border-radius: 14px; }
   .cat-style-glossy.cat-left nav.cat button::after { display: none; }
-  .cat-style-glossy section.categoria h3 { color: #ddd; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
-  .cat-style-glossy .prodotto .nome { color: #eee; }
-  .cat-style-glossy .prodotto .desc { color: #bbb; }
+  /* GLOSSY — titoli */
+  .cat-style-glossy section.categoria h3 {
+    color: #eee; display: inline-block; padding: 8px 18px; border-radius: 10px;
+    background: linear-gradient(180deg, #555 0%, #222 45%, #333 55%, #111 100%);
+    border: 1.5px solid #555;
+    box-shadow: 0 3px 10px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.15);
+    text-shadow: 0 1px 3px rgba(0,0,0,.6); font-weight: 800;
+  }
+  /* GLOSSY — card prodotto */
+  .cat-style-glossy .prodotto {
+    background: linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 100%);
+    border: 1.5px solid #555; border-radius: 16px; padding: 6px 6px 2px; overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .cat-style-glossy .prodotto .testo-prod::before { display: none; }
+  .cat-style-glossy .prodotto .nome { color: #f0f0f0; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  .cat-style-glossy .prodotto .desc { color: #aaa; }
   .cat-style-glossy .prodotto .riga-prezzo { color: #ddd; }
-  .cat-style-glossy .prodotto .testo-prod::before {
-    background:
-      radial-gradient(circle at 50% 50%, rgba(30,30,30,.92) 0%, rgba(30,30,30,0) 65%);
-    filter: blur(8px);
-  }
+  .cat-style-glossy .prezzo { color: #f0d888; }
   .cat-style-glossy .prodotto .foto, .cat-style-glossy .prodotto .foto-vuota {
-    border: 1.5px solid #444; border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(0,0,0,.4);
+    border: 0; border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.5);
   }
-  .cat-style-glossy .prodotto .foto-vuota { background: #2a2a2a; color: #666; }
+  .cat-style-glossy .prodotto .foto-vuota { background: #2a2a2a; color: #555; }
+  .cat-style-glossy .prodotto .piu {
+    box-shadow: 0 4px 12px rgba(226,96,79,.5), inset 0 1px 0 rgba(255,255,255,.2);
+  }
   .cat-style-glossy .prod-gruppo {
-    background: linear-gradient(180deg, #444 0%, #222 100%); color: #f0d888;
-    border: 1px solid #555;
+    background: linear-gradient(180deg, #444 0%, #1a1a1a 100%); color: #f0d888;
+    border: 1.5px solid #555; border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.1);
+    font-weight: 900;
   }
 
   /* STILE 5: FLAT — bianco pulito con bordo sottile colorato */
@@ -198,14 +245,27 @@
   }
   .cat-style-flat.cat-left nav.cat button { border-radius: 12px; }
   .cat-style-flat.cat-left nav.cat button::after { display: none; }
+  /* FLAT — titoli */
   .cat-style-flat section.categoria h3 {
     color: #2c5f8a; font-weight: 800; letter-spacing: .3px;
+    display: inline-block; padding: 6px 16px; border-radius: 8px;
+    border: 1.5px solid #6aade0; background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
   }
+  /* FLAT — card prodotto */
+  .cat-style-flat .prodotto {
+    background: #fff; border: 1.5px solid #d0dfe8; border-radius: 14px;
+    padding: 6px 6px 2px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(44,127,204,.08);
+  }
+  .cat-style-flat .prodotto .testo-prod::before { display: none; }
   .cat-style-flat .prodotto .foto, .cat-style-flat .prodotto .foto-vuota {
-    border: 1.5px solid #d0dfe8; border-radius: 12px;
+    border: 0; border-radius: 10px;
   }
+  .cat-style-flat .prodotto .nome { color: #2c3e50; }
   .cat-style-flat .prod-gruppo {
-    background: #2c7fcc; border-radius: 6px;
+    background: #2c7fcc; border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(44,127,204,.25);
   }
 
   /* griglia prodotti — PLU senza cornice, fusi col background */
@@ -349,7 +409,8 @@
     font-size: 14px; padding: 9px 14px; border-radius: 11px; margin: 18px 0 10px; box-shadow: 0 2px 8px rgba(224,163,48,.25);
   }
   section.categoria:first-child > h3, .prod-gruppo:first-child { margin-top: 0; }
-  body.cat-left section.categoria h3 { font-size: 19px; margin-top: 2px; scroll-margin-top: 84px; }
+  body.cat-left section.categoria { scroll-margin-top: 84px; }
+  body.cat-left section.categoria h3 { font-size: 19px; margin-top: 2px; }
   body.cat-left section.categoria:not(:first-child) h3 { margin-top: 18px; }
 
   /* schermata apertura più grande (coperti e menu) */
@@ -1099,7 +1160,7 @@ function osservaCategorie() {
     if (document.body.classList.contains('cat-left')) {
       scrollRuotaA(targetCat);
     }
-  }, { rootMargin: '-140px 0px -60% 0px' });
+  }, { rootMargin: '-130px 0px -60% 0px' });
   document.querySelectorAll('section.categoria').forEach(s => osservatore.observe(s));
 }
 
