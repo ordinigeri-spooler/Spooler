@@ -1714,20 +1714,52 @@ const ICONE_CATEGORIA_BASE64 = {
     }).join('');
   }
 
+  function categorieOrdineAlbero() {
+    const figliDi = new Map();
+    const idFiglio = new Set();
+    for (const cat of categorieCache) {
+      if (cat.categoria_collegata_id) {
+        idFiglio.add(cat.id);
+        if (!figliDi.has(cat.categoria_collegata_id)) figliDi.set(cat.categoria_collegata_id, []);
+        figliDi.get(cat.categoria_collegata_id).push(cat);
+      }
+    }
+    const ordinato = [];
+    for (const cat of categorieCache) {
+      if (idFiglio.has(cat.id)) continue;
+      ordinato.push({ cat, livello: 0 });
+      const sub = figliDi.get(cat.id);
+      if (sub) for (const s of sub) ordinato.push({ cat: s, livello: 1 });
+    }
+    // Orfani
+    for (const cat of categorieCache) {
+      if (!ordinato.find(o => o.cat.id === cat.id)) ordinato.push({ cat, livello: 0 });
+    }
+    return ordinato;
+  }
+
   function popolaSelectCategorie() {
+    const albero = categorieOrdineAlbero();
+
     const sel = document.getElementById('prodotto-categoria');
-    sel.innerHTML = categorieCache.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('');
+    sel.innerHTML = albero.map(({ cat, livello }) =>
+      `<option value="${cat.id}">${livello > 0 ? '↳ ' : ''}${escapeHtml(cat.nome)}</option>`
+    ).join('');
 
     const filtro = document.getElementById('filtro-categoria-prodotti');
     const valorePrecedente = filtro.value;
     filtro.innerHTML = '<option value="">Tutte le categorie</option>' +
-      categorieCache.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('');
+      albero.map(({ cat, livello }) =>
+        `<option value="${cat.id}">${livello > 0 ? '↳ ' : ''}${escapeHtml(cat.nome)}</option>`
+      ).join('');
     filtro.value = valorePrecedente;
 
     const selCollegata = document.getElementById('categoria-collegata');
     const idCorrente = document.getElementById('categoria-id').value;
     selCollegata.innerHTML = '<option value="">Nessuna — questa categoria appare da sola sulla barra</option>' +
-      categorieCache.filter(c => c.id !== idCorrente).map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('');
+      albero.filter(({ cat }) => cat.id !== idCorrente).map(({ cat, livello }) =>
+        `<option value="${cat.id}">${livello > 0 ? '↳ ' : ''}${escapeHtml(cat.nome)}</option>`
+      ).join('');
   }
 
   function renderChecklistGruppiCategoria(gruppiSelezionati) {
@@ -1900,7 +1932,8 @@ const ICONE_CATEGORIA_BASE64 = {
       .from('prodotti')
       .select('*, categorie(nome), prodotti_opzioni_variazione(opzione_variazione_id), prodotti_allergeni(allergene_id)')
       .eq('tenant_id', currentTenantId)
-      .order('ordine_visualizzazione');
+      .order('ordine_visualizzazione')
+      .order('created_at');
 
     if (error) { console.error(error); return; }
     prodottiCache = data || [];
