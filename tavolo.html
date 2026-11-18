@@ -947,7 +947,8 @@ function osservaCategorie() {
 
 // RUOTA categorie LINEARE: l'attiva grande al centro, le altre a scalare sopra/sotto;
 // dopo l'ultima non appare la prima e viceversa: c'è un inizio e una fine chiari.
-function aggiornaRuota() {
+// offsetFraz: offset frazionario per il drag continuo (0 = nessun drag)
+function aggiornaRuota(offsetFraz) {
   const nav = document.querySelector('body.cat-left nav.cat');
   if (!nav) return;
   const strip = nav.querySelector('.scroll'); if (!strip) return;
@@ -955,6 +956,7 @@ function aggiornaRuota() {
   const N = btns.length; if (!N) return;
   let att = btns.findIndex(b => b.classList.contains('on'));
   if (att < 0) att = 0;
+  const fuoco = att + (offsetFraz || 0);     // punto focale frazionario durante il drag
   const VISIBILI = 5;        // quante categorie mostrare sopra e sotto l'attiva
   const centro = nav.clientHeight / 2;
   const semialtezza = centro - 4;  // spazio utile da centro a bordo
@@ -962,10 +964,10 @@ function aggiornaRuota() {
   const POS_EXP = 0.55;
   const FONT_MAX = 18, FONT_MIN = 10, H_MAX = 62, H_MIN = 20;
   btns.forEach((b, i) => {
-    const d = i - att;                       // distanza LINEARE con segno (non ciclica)
+    const d = i - fuoco;                     // distanza LINEARE frazionaria con segno
     const ad = Math.abs(d);
-    if (ad > VISIBILI) { b.style.opacity = '0'; b.style.pointerEvents = 'none'; return; }
-    const n = ad / VISIBILI;                 // 0 (centro) .. 1 (bordo)
+    if (ad > VISIBILI + 0.5) { b.style.opacity = '0'; b.style.pointerEvents = 'none'; return; }
+    const n = Math.min(ad / VISIBILI, 1);    // 0 (centro) .. 1 (bordo)
     const warp = Math.pow(n, POS_EXP);       // posizione fisheye
     const peso = 1 - Math.pow(n, 1.45);      // 1 al centro -> 0 al bordo, calo marcato sul finale
     const isSub = b.classList.contains('sub-cat');
@@ -973,8 +975,8 @@ function aggiornaRuota() {
     const hMax = isSub ? H_MAX * 0.68 : H_MAX;
     b.style.fontSize = (FONT_MIN + (fMax - FONT_MIN) * peso).toFixed(2) + 'px';
     b.style.minHeight = (H_MIN + (hMax - H_MIN) * peso).toFixed(1) + 'px';
-    b.style.top = (centro + Math.sign(d) * warp * semialtezza) + 'px';
-    b.style.zIndex = String(50 - ad);
+    b.style.top = (centro + (d < 0 ? -1 : 1) * warp * semialtezza) + 'px';
+    b.style.zIndex = String(50 - Math.round(ad));
     b.style.pointerEvents = '';
     b.style.opacity = String(Math.max(0.4, 1 - n * 0.55)); // i lontani piu sbiaditi
   });
@@ -1005,47 +1007,103 @@ let rafFaro = 0;
 window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro = requestAnimationFrame(fisheyeProdotti); }, { passive: true });
 window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); aggiornaStrumenti(); });
 
-// --- TOUCH/SWIPE sulla ruota categorie ---
+// --- TOUCH DRAG CONTINUO sulla ruota categorie ---
+// Il dito muove la ruota in tempo reale; al rilascio, snappa alla categoria più vicina
+// e scrolla i prodotti corrispondenti.
 (function() {
-  let touchY0 = null, touchMoved = false;
-  const SOGLIA = 30; // px per considerare uno swipe
+  let dragging = false;
+  let touchY0 = 0;         // Y iniziale del tocco
+  let startAtt = 0;        // indice attivo al momento del touchstart
+  let dragOffset = 0;      // offset frazionario corrente
+  let lastSnapIdx = -1;    // ultimo indice "evidenziato" durante il drag
+  let rafDrag = 0;
+  const PX_PER_CAT = 50;   // pixel di drag per avanzare di una categoria
+
+  function getNavState() {
+    const nav = document.querySelector('body.cat-left nav.cat');
+    if (!nav) return null;
+    const strip = nav.querySelector('.scroll');
+    if (!strip) return null;
+    const btns = [...strip.querySelectorAll('button')];
+    if (!btns.length) return null;
+    return { nav, strip, btns };
+  }
+
   document.addEventListener('touchstart', function(e) {
     const nav = e.target.closest('body.cat-left nav.cat');
     if (!nav) return;
+    const s = getNavState(); if (!s) return;
+    dragging = true;
     touchY0 = e.touches[0].clientY;
-    touchMoved = false;
+    startAtt = s.btns.findIndex(b => b.classList.contains('on'));
+    if (startAtt < 0) startAtt = 0;
+    dragOffset = 0;
+    lastSnapIdx = startAtt;
+    // Disabilita le transizioni CSS durante il drag per reattività immediata
+    s.btns.forEach(b => b.style.transition = 'none');
   }, { passive: true });
+
   document.addEventListener('touchmove', function(e) {
-    if (touchY0 === null) return;
+    if (!dragging) return;
     const nav = e.target.closest('body.cat-left nav.cat');
     if (!nav) return;
-    touchMoved = true;
-    e.preventDefault(); // blocca lo scroll della pagina dentro il nav
+    e.preventDefault(); // blocca scroll pagina dentro il nav
+    const dy = e.touches[0].clientY - touchY0;
+    // dy negativo = dito verso l'alto = avanti (offset positivo)
+    dragOffset = -dy / PX_PER_CAT;
+    const s = getNavState(); if (!s) return;
+    const N = s.btns.length;
+    // Clamp: non andare oltre i limiti
+    const fuocoRaw = startAtt + dragOffset;
+    if (fuocoRaw < 0) dragOffset = -startAtt;
+    if (fuocoRaw > N - 1) dragOffset = N - 1 - startAtt;
+    cancelAnimationFrame(rafDrag);
+    rafDrag = requestAnimationFrame(() => aggiornaRuota(dragOffset));
+    // Evidenzia la categoria più vicina al centro durante il drag
+    const snap = Math.round(Math.max(0, Math.min(N - 1, startAtt + dragOffset)));
+    if (snap !== lastSnapIdx) {
+      lastSnapIdx = snap;
+      s.btns.forEach((b, i) => b.classList.toggle('on', i === snap));
+    }
   }, { passive: false });
+
   document.addEventListener('touchend', function(e) {
-    if (touchY0 === null) return;
-    const nav = e.target.closest('body.cat-left nav.cat');
-    if (!nav) { touchY0 = null; return; }
-    const dy = e.changedTouches[0].clientY - touchY0;
-    touchY0 = null;
-    if (!touchMoved || Math.abs(dy) < SOGLIA) return;
-    // Swipe verso l'alto (dy < 0) = avanti, verso il basso (dy > 0) = indietro
-    const strip = nav.querySelector('.scroll');
-    if (!strip) return;
-    const btns = [...strip.querySelectorAll('button')];
-    const N = btns.length; if (!N) return;
-    let att = btns.findIndex(b => b.classList.contains('on'));
-    if (att < 0) att = 0;
-    const passo = Math.min(Math.round(Math.abs(dy) / 60), 3) || 1; // swipe lungo = più passi
-    let nuova = dy < 0 ? att + passo : att - passo;
-    nuova = Math.max(0, Math.min(N - 1, nuova)); // LINEARE: clamp, non wrap
-    if (nuova === att) return;
-    const btn = btns[nuova];
+    if (!dragging) return;
+    dragging = false;
+    const s = getNavState(); if (!s) return;
+    const N = s.btns.length;
+    // Riattiva le transizioni CSS
+    s.btns.forEach(b => b.style.transition = '');
+    // Snappa alla categoria più vicina
+    const finale = Math.round(Math.max(0, Math.min(N - 1, startAtt + dragOffset)));
+    s.btns.forEach((b, i) => b.classList.toggle('on', i === finale));
+    dragOffset = 0;
+    aggiornaRuota();
+    // Scrolla ai prodotti della categoria selezionata
+    const btn = s.btns[finale];
     if (btn) {
       const scrollId = btn.dataset.vai;
       const el = document.getElementById('cat-' + scrollId);
       if (el) el.scrollIntoView({ behavior: 'smooth' });
+      // Se è un parent con figli, espandilo
+      const catId = btn.dataset.cat;
+      const isParent = btn.dataset.parent === '1';
+      if (isParent && categoriaEspansa !== catId) {
+        categoriaEspansa = catId;
+        ridisegnaNav();
+        aggiornaRuota();
+      }
     }
+  }, { passive: true });
+
+  // Se il tocco esce dal nav senza touchend (raro), annulla il drag
+  document.addEventListener('touchcancel', function() {
+    if (!dragging) return;
+    dragging = false;
+    const s = getNavState(); if (!s) return;
+    s.btns.forEach(b => b.style.transition = '');
+    dragOffset = 0;
+    aggiornaRuota();
   }, { passive: true });
 })();
 
