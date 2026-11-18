@@ -131,14 +131,14 @@
 
   /* categorie — a sinistra (body.cat-left): rail verticale grande e moderno */
   body.cat-left #sotto-ordina { display: flex; gap: 14px; align-items: flex-start; }
-  /* COLONNA categorie — semplice lista scrollabile con ombra */
+  /* COLONNA categorie — lista semplice scrollabile */
   body.cat-left nav.cat {
     position: sticky; top: calc(72px + env(safe-area-inset-top)); z-index: 10;
-    flex: 0 0 110px; margin: 0; padding: 0; align-self: flex-start;
+    flex: 0 0 120px; margin: 0; padding: 0; align-self: flex-start;
     height: calc(100dvh - 150px);
-    background: rgba(255,255,255,.65);
-    border-radius: 18px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.10), 0 1px 6px rgba(0,0,0,.06);
+    background: rgba(245,247,250,.85);
+    border-radius: 16px;
+    box-shadow: 2px 0 16px rgba(0,0,0,.08);
     overflow: hidden;
   }
   body.cat-left nav.cat .scroll {
@@ -146,54 +146,38 @@
     height: 100%; overflow-y: auto; overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    background: transparent; border: 0; border-radius: 0; box-shadow: none;
-    padding: 6px 0; gap: 4px;
+    padding: 6px 0; gap: 5px;
   }
   body.cat-left nav.cat .scroll::-webkit-scrollbar { display: none; }
   body.cat-left nav.cat button {
-    position: relative; flex-shrink: 0;
-    height: 48px; min-height: 48px;
+    flex-shrink: 0;
+    min-height: 56px;
     display: flex; align-items: center; justify-content: center;
     white-space: normal; text-align: center; font-family: 'Baloo 2', sans-serif;
-    font-size: 13px; font-weight: 700; line-height: 1.12;
+    font-size: 14px; font-weight: 700; line-height: 1.15;
     word-break: break-word; hyphens: auto;
-    padding: 5px 8px; margin: 0 5px;
-    border: 1px solid rgba(255,255,255,.65); border-radius: 14px;
-    background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
-    box-shadow: 0 2px 6px rgba(93,151,201,.2), inset 0 1px 0 rgba(255,255,255,.9);
-    overflow: hidden;
-    transition: background .3s ease, box-shadow .3s ease, color .3s ease;
+    padding: 8px 6px; margin: 0 5px;
+    border: none; border-radius: 12px;
+    background: #fff; color: #243746;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
   }
-  /* sottocategoria nel nav: più piccola, più a destra, sfondo diverso */
   body.cat-left nav.cat button.sub-cat {
-    margin-left: 16px; margin-right: 6px;
-    height: 44px; min-height: 44px;
-    border-radius: 14px; font-size: 13px;
-    background: linear-gradient(150deg, #fff8e6 0%, #f5e8c4 100%);
-    border-color: rgba(224,163,48,.4);
-    color: #6a4d0a; font-weight: 600;
-    box-shadow: 0 3px 8px rgba(224,163,48,.25), inset 0 1px 0 rgba(255,255,255,.7);
+    margin-left: 14px; margin-right: 6px;
+    min-height: 48px;
+    font-size: 13px; font-weight: 600;
+    background: #fef8e8; color: #6a4d0a;
   }
   body.cat-left nav.cat button.sub-cat.on {
-    background: linear-gradient(150deg, #f0c858 0%, #e0a330 100%); color: #fff;
-    box-shadow: 0 8px 20px rgba(224,163,48,.5), inset 0 1px 0 rgba(255,255,255,.3);
+    background: #e0a330; color: #fff;
   }
-  /* parent con figli: indicatore espandi */
-  body.cat-left nav.cat button.has-children::before {
-    content: '▾'; position: absolute; right: 5px; bottom: 1px; font-size: 9px; opacity: .45;
-    font-family: system-ui; pointer-events: none;
+  body.cat-left nav.cat button.has-children::after {
+    content: ' ▾'; font-size: 10px; opacity: .5;
   }
-  body.cat-left nav.cat button.has-children.espanso::before { content: '▴'; opacity: .65; }
+  body.cat-left nav.cat button.has-children.espanso::after { content: ' ▴'; opacity: .7; }
   body.cat-left nav.cat .cat-gruppo { display: none; }
-  /* riflesso diagonale "glass" */
-  body.cat-left nav.cat button::after {
-    content: ''; position: absolute; top: -40%; left: -30%; width: 90%; height: 60%;
-    background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
-    transform: rotate(-18deg); pointer-events: none; border-radius: 50%;
-  }
   body.cat-left nav.cat button.on {
-    background: linear-gradient(150deg, #9cc6e8 0%, #5b97c9 100%); color: #fff; border-color: rgba(255,255,255,.4);
-    box-shadow: 0 14px 30px rgba(74,130,180,.62), inset 0 1px 0 rgba(255,255,255,.45);
+    background: #5b97c9; color: #fff;
+    box-shadow: 0 2px 8px rgba(74,130,180,.35);
   }
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
@@ -201,11 +185,6 @@
   /* colonna categorie -> prodotti a 2 colonne */
   body.cat-left .griglia { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px 8px; }
   body.cat-left .prodotto { transform-origin: center center; will-change: transform, opacity; }
-  body.cat-left .prodotto .nome { font-size: 13px; }
-  body.cat-left .prodotto .foto, body.cat-left .prodotto .foto-vuota { border-radius: 16px; }
-  body.cat-left .prodotto .piu { width: 34px; height: 34px; font-size: 21px; }
-  body.cat-left .prodotto .agg { right: 6px; bottom: 6px; }
-  body.cat-left .prodotto .stepper button { width: 27px; height: 27px; font-size: 15px; }
   body.cat-left .prodotto .nome { font-size: 13px; }
   body.cat-left .prodotto .foto, body.cat-left .prodotto .foto-vuota { border-radius: 16px; }
   body.cat-left .prodotto .piu { width: 34px; height: 34px; font-size: 21px; }
@@ -771,29 +750,23 @@ function ridisegnaNav() {
   }
 
   const strip = $('tabs-cat');
-  // Spacer in cima: altezza = metà container meno metà bottone, per centrare il primo
-  const navH = strip.parentElement.clientHeight || 300;
-  const spacerH = Math.max(0, navH / 2 - 30);
 
-  strip.innerHTML =
-    '<div class="spacer-ruota" style="height:' + spacerH + 'px"></div>' +
-    buttons.map((b, i) => {
-      const d = dividiCategoria(b.cat.nome);
-      const haFigli = !b.isSub && navParentMap.has(b.cat.id) && navParentMap.get(b.cat.id).length > 0;
-      const isEspanso = b.cat.id === categoriaEspansa;
-      const cls = [
-        b.isSub ? 'sub-cat' : '',
-        haFigli ? 'has-children' : '',
-        isEspanso ? 'espanso' : ''
-      ].filter(Boolean).join(' ');
-      const dataAttrs = haFigli ? 'data-parent="1"' : '';
-      let vaiId = b.cat.id;
-      if (b.isContainer && navParentMap.has(b.cat.id)) {
-        vaiId = navParentMap.get(b.cat.id)[0].id;
-      }
-      return `<button class="${cls}" data-vai="${vaiId}" data-cat="${b.cat.id}" ${dataAttrs}>${esc(d.label)}</button>`;
-    }).join('') +
-    '<div class="spacer-ruota" style="height:' + spacerH + 'px"></div>';
+  strip.innerHTML = buttons.map((b, i) => {
+    const d = dividiCategoria(b.cat.nome);
+    const haFigli = !b.isSub && navParentMap.has(b.cat.id) && navParentMap.get(b.cat.id).length > 0;
+    const isEspanso = b.cat.id === categoriaEspansa;
+    const cls = [
+      b.isSub ? 'sub-cat' : '',
+      haFigli ? 'has-children' : '',
+      isEspanso ? 'espanso' : ''
+    ].filter(Boolean).join(' ');
+    const dataAttrs = haFigli ? 'data-parent="1"' : '';
+    let vaiId = b.cat.id;
+    if (b.isContainer && navParentMap.has(b.cat.id)) {
+      vaiId = navParentMap.get(b.cat.id)[0].id;
+    }
+    return `<button class="${cls}" data-vai="${vaiId}" data-cat="${b.cat.id}" ${dataAttrs}>${esc(d.label)}</button>`;
+  }).join('');
 
   // Click handlers
   document.querySelectorAll('#tabs-cat button[data-cat]').forEach(btn => {
@@ -820,9 +793,6 @@ function ridisegnaNav() {
     };
   });
 
-  // Setup scroll-snap listener + fisheye
-  setupRuotaScroll();
-  aggiornaRuota();
 }
 
 function parentDiCategoria(catId) {
@@ -859,13 +829,6 @@ function disegnaMenu() {
   }).join('') : `<div class="vuoto">${testoCerca ? 'Nessun prodotto trovato per «' + esc(testoCerca) + '».' : allergeniEsclusi.size ? 'Nessun piatto senza gli allergeni selezionati.<br><button class="btn sec" style="max-width:220px;margin:14px auto 0" onclick="azzeraFiltri()">Mostra tutto</button>' : 'Nessun piatto disponibile in questo menu.'}</div>`;
   collegaSchede();
   osservaCategorie();
-  // Lo scroll-snap si inizializza in ridisegnaNav() -> setupRuotaScroll()
-  // Scroll iniziale al primo bottone
-  setTimeout(() => {
-    const primo = document.querySelector('#tabs-cat button');
-    if (primo) primo.scrollIntoView({ behavior: 'auto', block: 'center' });
-    aggiornaRuota();
-  }, 50);
   fisheyeProdotti();
   aggiornaBarra();
 }
@@ -964,7 +927,7 @@ function osservaCategorie() {
       b.classList.toggle('on', on);
       if (on && !document.body.classList.contains('cat-left')) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     });
-    // Scrolla la ruota (scroll-snap) per centrare il bottone giusto
+    // Scrolla la colonna categorie per mostrare il bottone attivo
     if (document.body.classList.contains('cat-left')) {
       scrollRuotaA(targetCat);
     }
@@ -972,103 +935,19 @@ function osservaCategorie() {
   document.querySelectorAll('section.categoria').forEach(s => osservatore.observe(s));
 }
 
-// === RUOTA CATEGORIE — SCROLL-SNAP NATIVO ===
-// Il browser gestisce touch, momentum e snap. Noi gestiamo solo l'effetto fisheye
-// visivo (transform + opacity) e la sincronizzazione con i prodotti.
+// === COLONNA CATEGORIE — semplice highlight + scroll into view ===
 
-let ruotaProgrammatica = false;  // true quando la ruota scrolla per via dei prodotti
-let ruotaScrollTimer = 0;        // debounce per rilevare fine scroll della ruota
-let ultimaCatRuota = '';         // ultima categoria navigata dalla ruota (evita loop)
-
-// Effetto FISHEYE visivo sui bottoni della ruota: scala e opacità basate sulla
-// distanza dal centro dello scroll container. NON modifica layout (usa transform).
-function aggiornaRuota() {
-  const nav = document.querySelector('body.cat-left nav.cat');
-  if (!nav) return;
-  const strip = nav.querySelector('.scroll'); if (!strip) return;
-  const btns = [...strip.querySelectorAll('button')];
-  if (!btns.length) return;
-  const slot = nav.querySelector('.slot-centro');
-  const stripRect = strip.getBoundingClientRect();
-  const centroY = stripRect.top + stripRect.height / 2;
-  const semi = stripRect.height / 2;
-  let minDist = Infinity, nearestIdx = 0;
-
-  btns.forEach((b, i) => {
-    const r = b.getBoundingClientRect();
-    const btnCentro = r.top + r.height / 2;
-    const distPx = Math.abs(btnCentro - centroY);
-    const n = Math.min(distPx / semi, 1); // 0 = centro, 1 = bordo
-
-    const scala = 1 - 0.28 * Math.pow(n, 0.7);
-    const op = 1 - 0.5 * Math.pow(n, 1.1);
-    const isSub = b.classList.contains('sub-cat');
-    b.style.transform = 'scale(' + (scala * (isSub ? 0.9 : 1)).toFixed(3) + ')';
-    b.style.opacity = Math.max(0.3, op).toFixed(3);
-
-    if (distPx < minDist) { minDist = distPx; nearestIdx = i; }
-  });
-
-  // Evidenzia il bottone più vicino al centro
-  btns.forEach((b, i) => b.classList.toggle('on', i === nearestIdx));
-
-  // Slot luminoso: si accende quando una categoria è ben centrata
-  if (slot) slot.classList.toggle('attivo', minDist < 28);
-}
-
-// Scrolla la ruota per portare un certo bottone (by data-cat) al centro
+// Scrolla la colonna per rendere visibile il bottone della categoria corrente
 function scrollRuotaA(catId) {
   const strip = document.querySelector('body.cat-left nav.cat .scroll');
   if (!strip) return;
   const btn = strip.querySelector('button[data-cat="' + catId + '"]');
   if (!btn) return;
-  ruotaProgrammatica = true;
-  btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  // Reset flag dopo che lo scroll finisce
-  clearTimeout(ruotaScrollTimer);
-  ruotaScrollTimer = setTimeout(() => { ruotaProgrammatica = false; }, 600);
+  btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-// Listener scroll sulla ruota: aggiorna fisheye in real-time + naviga ai prodotti a fine scroll
-function setupRuotaScroll() {
-  const strip = document.querySelector('body.cat-left nav.cat .scroll');
-  if (!strip) return;
-  let rafId = 0;
-  let fineScrollTimer = 0;
-
-  strip.addEventListener('scroll', () => {
-    // Aggiorna fisheye in tempo reale (ogni frame)
-    cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(aggiornaRuota);
-
-    // Debounce fine scroll: quando lo scroll si ferma, naviga ai prodotti
-    clearTimeout(fineScrollTimer);
-    fineScrollTimer = setTimeout(() => {
-      if (ruotaProgrammatica) return; // non navigare se lo scroll è stato causato dai prodotti
-      const btns = [...strip.querySelectorAll('button')];
-      const onBtn = btns.find(b => b.classList.contains('on'));
-      if (!onBtn) return;
-      const scrollId = onBtn.dataset.vai;
-      const catId = onBtn.dataset.cat;
-      if (catId === ultimaCatRuota) return; // già lì
-      ultimaCatRuota = catId;
-      // Espandi parent se necessario
-      const isParent = onBtn.dataset.parent === '1';
-      if (isParent && categoriaEspansa !== catId) {
-        categoriaEspansa = catId;
-        ridisegnaNav();
-        // Dopo ridisegno, scrolla ai prodotti
-        setTimeout(() => {
-          const el = document.getElementById('cat-' + scrollId);
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-        return;
-      }
-      const el = document.getElementById('cat-' + scrollId);
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }, 180);
-  }, { passive: true });
-}
+// Placeholder — non serve più, ma chiamato da resize
+function aggiornaRuota() {}
 
 // FISHEYE prodotti: al centro pieni, verso i bordi alto/basso rimpiccioliscono
 function fisheyeProdotti() {
