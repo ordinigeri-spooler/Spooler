@@ -152,7 +152,7 @@
     background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
     box-shadow: 0 4px 12px rgba(93,151,201,.35), inset 0 1px 0 rgba(255,255,255,.9);
     overflow: visible;
-    transition: top .5s cubic-bezier(.25,.9,.3,1), font-size .5s cubic-bezier(.25,.9,.3,1), min-height .5s cubic-bezier(.25,.9,.3,1), opacity .4s ease, background .35s ease, box-shadow .35s ease, color .35s ease, left .4s ease, right .4s ease;
+    transition: top .8s cubic-bezier(.22,.85,.3,1), font-size .8s cubic-bezier(.22,.85,.3,1), min-height .8s cubic-bezier(.22,.85,.3,1), opacity .6s ease, background .5s ease, box-shadow .5s ease, color .5s ease, left .6s ease, right .6s ease;
   }
   /* sottocategoria nel nav: più piccola, più a destra, sfondo diverso */
   body.cat-left nav.cat button.sub-cat {
@@ -809,7 +809,7 @@ function ridisegnaNav() {
           setTimeout(() => {
             const el = document.getElementById('cat-' + scrollId);
             if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }, 60);
+          }, 350);
         }
       } else {
         // Sottocategoria o standalone: scorri
@@ -1021,8 +1021,8 @@ window.addEventListener('scroll', () => { cancelAnimationFrame(rafFaro); rafFaro
 window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); aggiornaStrumenti(); });
 
 // --- TOUCH DRAG CONTINUO sulla ruota categorie ---
-// Il dito muove la ruota in tempo reale; al rilascio, snappa alla categoria più vicina
-// e scrolla i prodotti corrispondenti.
+// Il dito muove la ruota in tempo reale (lentamente); lo slot centrale si illumina
+// quando una categoria vi entra; al rilascio snappa e mostra i prodotti.
 (function() {
   let dragging = false;
   let touchY0 = 0;         // Y iniziale del tocco
@@ -1030,7 +1030,7 @@ window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); ag
   let dragOffset = 0;      // offset frazionario corrente
   let lastSnapIdx = -1;    // ultimo indice "evidenziato" durante il drag
   let rafDrag = 0;
-  const PX_PER_CAT = 50;   // pixel di drag per avanzare di una categoria
+  const PX_PER_CAT = 280;  // pixel di drag per avanzare di una categoria (molto lento e fluido)
 
   function getNavState() {
     const nav = document.querySelector('body.cat-left nav.cat');
@@ -1039,7 +1039,15 @@ window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); ag
     if (!strip) return null;
     const btns = [...strip.querySelectorAll('button')];
     if (!btns.length) return null;
-    return { nav, strip, btns };
+    const slot = nav.querySelector('.slot-centro');
+    return { nav, strip, btns, slot };
+  }
+
+  // Illumina/spegni lo slot centrale
+  function aggiornaSlot(slot, vicino) {
+    if (!slot) return;
+    // vicino = quanto la categoria è vicina al centro (0 = perfettamente centrata, 0.5 = bordo)
+    slot.classList.toggle('attivo', vicino < 0.35);
   }
 
   document.addEventListener('touchstart', function(e) {
@@ -1054,6 +1062,7 @@ window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); ag
     lastSnapIdx = startAtt;
     // Disabilita le transizioni CSS durante il drag per reattività immediata
     s.btns.forEach(b => b.style.transition = 'none');
+    if (s.slot) s.slot.classList.add('attivo');
   }, { passive: true });
 
   document.addEventListener('touchmove', function(e) {
@@ -1071,7 +1080,10 @@ window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); ag
     cancelAnimationFrame(rafDrag);
     rafDrag = requestAnimationFrame(() => aggiornaRuota(dragOffset));
     // Evidenzia la categoria più vicina al centro durante il drag
-    const snap = Math.round(Math.max(0, Math.min(N - 1, startAtt + dragOffset)));
+    const fuoco = startAtt + dragOffset;
+    const snap = Math.round(Math.max(0, Math.min(N - 1, fuoco)));
+    const distDalCentro = Math.abs(fuoco - snap); // 0 = centrata, 0.5 = tra due
+    aggiornaSlot(s.slot, distDalCentro);
     if (snap !== lastSnapIdx) {
       lastSnapIdx = snap;
       s.btns.forEach((b, i) => b.classList.toggle('on', i === snap));
@@ -1085,6 +1097,8 @@ window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); ag
     const N = s.btns.length;
     // Riattiva le transizioni CSS
     s.btns.forEach(b => b.style.transition = '');
+    // Spegni lo slot
+    if (s.slot) s.slot.classList.remove('attivo');
     // Snappa alla categoria più vicina
     const finale = Math.round(Math.max(0, Math.min(N - 1, startAtt + dragOffset)));
     s.btns.forEach((b, i) => b.classList.toggle('on', i === finale));
@@ -1113,6 +1127,7 @@ window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); ag
     dragging = false;
     const s = getNavState(); if (!s) return;
     s.btns.forEach(b => b.style.transition = '');
+    if (s.slot) s.slot.classList.remove('attivo');
     dragOffset = 0;
     aggiornaRuota();
   }, { passive: true });
