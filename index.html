@@ -489,6 +489,15 @@
             <span>Categorie a sinistra (invece che in alto)</span>
           </label>
           <p class="tv-hint">Come appaiono le categorie del menu nella pagina che vede il cliente col QR.</p>
+          <label for="tv-stile-categorie" style="margin-top:12px;">Stile bottoni categorie</label>
+          <select id="tv-stile-categorie">
+            <option value="glass">Glass (vetro, gradiente)</option>
+            <option value="colorful">Colorful (bordi scuri, vivace)</option>
+            <option value="chrome">Chrome (metallico argentato)</option>
+            <option value="glossy">Glossy (nero lucido)</option>
+            <option value="flat">Flat (bianco, bordo sottile)</option>
+          </select>
+          <p class="tv-hint">Lo stile dei bottoni delle categorie nella pagina cliente. Vale sia per la disposizione orizzontale che verticale.</p>
           <div class="msg" id="tv-imp-msg"></div>
           <button type="submit" style="width:100%; margin-top:14px;">Salva regole</button>
         </form>
@@ -5510,11 +5519,12 @@ const ICONE_CATEGORIA_BASE64 = {
 
   // ---------- regole ----------
   async function tvCaricaImpostazioni() {
-    const { data } = await sbClient.from('impostazioni_locale').select('tavolo_max_pezzi_persona, tavolo_minuti_riordino, tavolo_ore_scadenza, categorie_laterali').eq('tenant_id', currentTenantId).maybeSingle();
+    const { data } = await sbClient.from('impostazioni_locale').select('tavolo_max_pezzi_persona, tavolo_minuti_riordino, tavolo_ore_scadenza, categorie_laterali, stile_categorie').eq('tenant_id', currentTenantId).maybeSingle();
     document.getElementById('tv-max-pezzi').value = data && data.tavolo_max_pezzi_persona != null ? data.tavolo_max_pezzi_persona : '';
     document.getElementById('tv-minuti').value = data ? data.tavolo_minuti_riordino : 0;
     document.getElementById('tv-scadenza').value = data ? data.tavolo_ore_scadenza : 6;
     document.getElementById('tv-categorie-laterali').checked = !!(data && data.categorie_laterali);
+    document.getElementById('tv-stile-categorie').value = (data && data.stile_categorie) || 'glass';
   }
   document.getElementById('form-tv-impostazioni').addEventListener('submit', async e => {
     e.preventDefault();
@@ -5523,6 +5533,7 @@ const ICONE_CATEGORIA_BASE64 = {
       tavolo_minuti_riordino: Math.max(0, parseInt(document.getElementById('tv-minuti').value) || 0),
       tavolo_ore_scadenza: Math.max(1, parseInt(document.getElementById('tv-scadenza').value) || 6),
       categorie_laterali: document.getElementById('tv-categorie-laterali').checked,
+      stile_categorie: document.getElementById('tv-stile-categorie').value,
     };
     const { data: esiste } = await sbClient.from('impostazioni_locale').select('id').eq('tenant_id', currentTenantId).maybeSingle();
     const { error } = esiste
