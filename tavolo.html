@@ -184,6 +184,19 @@
     background: linear-gradient(150deg, #9cc6e8 0%, #5b97c9 100%); color: #fff; border-color: rgba(255,255,255,.4);
     box-shadow: 0 14px 30px rgba(74,130,180,.62), inset 0 1px 0 rgba(255,255,255,.45);
   }
+  /* SLOT centrale — cornice luminosa che indica dove "entra" la categoria attiva */
+  body.cat-left nav.cat .slot-centro {
+    position: absolute; left: 2px; right: 2px; top: 50%; transform: translateY(-50%);
+    height: 68px; border-radius: 20px; pointer-events: none; z-index: 0;
+    border: 2px solid rgba(93,151,201,.2);
+    background: radial-gradient(ellipse at center, rgba(93,151,201,.06) 0%, transparent 70%);
+    transition: border-color .3s, box-shadow .3s, background .3s;
+  }
+  body.cat-left nav.cat .slot-centro.attivo {
+    border-color: rgba(93,151,201,.55);
+    box-shadow: 0 0 18px rgba(93,151,201,.35), inset 0 0 12px rgba(93,151,201,.1);
+    background: radial-gradient(ellipse at center, rgba(93,151,201,.12) 0%, transparent 70%);
+  }
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
   body.cat-left #lista-prodotti { flex: 1; min-width: 0; position: relative; }
@@ -379,7 +392,7 @@
   <div id="v-menu" class="hidden">
     <div class="stato" id="stato-comanda"></div>
     <div id="sotto-ordina">
-      <nav class="cat"><div class="scroll" id="tabs-cat"></div></nav>
+      <nav class="cat"><div class="slot-centro"></div><div class="scroll" id="tabs-cat"></div></nav>
       <div id="lista-prodotti"></div>
     </div>
     <div id="sotto-comande" class="hidden"></div>
@@ -1045,9 +1058,7 @@ window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); ag
 
   document.addEventListener('touchmove', function(e) {
     if (!dragging) return;
-    const nav = e.target.closest('body.cat-left nav.cat');
-    if (!nav) return;
-    e.preventDefault(); // blocca scroll pagina dentro il nav
+    e.preventDefault(); // blocca scroll pagina durante il drag della ruota
     const dy = e.touches[0].clientY - touchY0;
     // dy negativo = dito verso l'alto = avanti (offset positivo)
     dragOffset = -dy / PX_PER_CAT;
@@ -1067,7 +1078,7 @@ window.addEventListener('resize', () => { aggiornaRuota(); fisheyeProdotti(); ag
     }
   }, { passive: false });
 
-  document.addEventListener('touchend', function(e) {
+  document.addEventListener('touchend', function() {
     if (!dragging) return;
     dragging = false;
     const s = getNavState(); if (!s) return;
