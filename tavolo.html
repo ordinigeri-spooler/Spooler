@@ -131,14 +131,12 @@
 
   /* categorie — a sinistra (body.cat-left): rail verticale grande e moderno */
   body.cat-left #sotto-ordina { display: flex; gap: 14px; align-items: flex-start; }
-  /* COLONNA categorie — lista semplice scrollabile */
+  /* COLONNA categorie — lista scrollabile, sfondo trasparente */
   body.cat-left nav.cat {
     position: sticky; top: calc(72px + env(safe-area-inset-top)); z-index: 10;
     flex: 0 0 120px; margin: 0; padding: 0; align-self: flex-start;
     height: calc(100dvh - 150px);
-    background: rgba(245,247,250,.85);
-    border-radius: 16px;
-    box-shadow: 2px 0 16px rgba(0,0,0,.08);
+    background: transparent;
     overflow: hidden;
   }
   body.cat-left nav.cat .scroll {
@@ -149,35 +147,56 @@
     padding: 6px 0; gap: 5px;
   }
   body.cat-left nav.cat .scroll::-webkit-scrollbar { display: none; }
+  /* bottoni glass */
   body.cat-left nav.cat button {
-    flex-shrink: 0;
+    position: relative; flex-shrink: 0;
     min-height: 56px;
     display: flex; align-items: center; justify-content: center;
     white-space: normal; text-align: center; font-family: 'Baloo 2', sans-serif;
     font-size: 14px; font-weight: 700; line-height: 1.15;
     word-break: break-word; hyphens: auto;
-    padding: 8px 6px; margin: 0 5px;
-    border: none; border-radius: 12px;
-    background: #fff; color: #243746;
-    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    padding: 8px 6px; margin: 0 4px;
+    border: 1px solid rgba(255,255,255,.65); border-radius: 16px;
+    background: linear-gradient(150deg, #ffffff 0%, #e8f1fb 100%); color: #243746;
+    box-shadow: 0 3px 10px rgba(93,151,201,.3), inset 0 1px 0 rgba(255,255,255,.9);
+    overflow: hidden;
   }
+  /* riflesso glass */
+  body.cat-left nav.cat button::after {
+    content: ''; position: absolute; top: -40%; left: -30%; width: 90%; height: 60%;
+    background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0));
+    transform: rotate(-18deg); pointer-events: none; border-radius: 50%;
+  }
+  /* sottocategoria — transizione soft per expand/collapse */
   body.cat-left nav.cat button.sub-cat {
     margin-left: 14px; margin-right: 6px;
-    min-height: 48px;
+    min-height: 44px; border-radius: 13px;
     font-size: 13px; font-weight: 600;
-    background: #fef8e8; color: #6a4d0a;
+    background: linear-gradient(150deg, #fff8e6 0%, #f5e8c4 100%);
+    border-color: rgba(224,163,48,.4);
+    color: #6a4d0a;
+    box-shadow: 0 2px 8px rgba(224,163,48,.2), inset 0 1px 0 rgba(255,255,255,.7);
+    transition: max-height .35s ease, opacity .3s ease, margin .3s ease, padding .3s ease;
+  }
+  body.cat-left nav.cat button.sub-cat.sub-enter {
+    max-height: 0; min-height: 0; opacity: 0; overflow: hidden;
+    margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0;
+    border-width: 0;
   }
   body.cat-left nav.cat button.sub-cat.on {
-    background: #e0a330; color: #fff;
+    background: linear-gradient(150deg, #f0c858 0%, #e0a330 100%); color: #fff;
+    box-shadow: 0 6px 16px rgba(224,163,48,.45), inset 0 1px 0 rgba(255,255,255,.3);
   }
-  body.cat-left nav.cat button.has-children::after {
-    content: ' ▾'; font-size: 10px; opacity: .5;
+  body.cat-left nav.cat button.has-children::before {
+    content: '▾'; position: absolute; right: 6px; bottom: 2px; font-size: 9px; opacity: .45;
+    font-family: system-ui; pointer-events: none;
   }
-  body.cat-left nav.cat button.has-children.espanso::after { content: ' ▴'; opacity: .7; }
+  body.cat-left nav.cat button.has-children.espanso::before { content: '▴'; opacity: .65; }
   body.cat-left nav.cat .cat-gruppo { display: none; }
   body.cat-left nav.cat button.on {
-    background: #5b97c9; color: #fff;
-    box-shadow: 0 2px 8px rgba(74,130,180,.35);
+    background: linear-gradient(150deg, #9cc6e8 0%, #5b97c9 100%); color: #fff;
+    border-color: rgba(255,255,255,.4);
+    box-shadow: 0 6px 18px rgba(74,130,180,.5), inset 0 1px 0 rgba(255,255,255,.45);
   }
   /* fascia-gruppo (es. "GIAPPONESE") ricavata dal prefisso "Gruppo - Sottocategoria" */
   nav.cat .cat-gruppo { display: none; }
@@ -767,6 +786,18 @@ function ridisegnaNav() {
     }
     return `<button class="${cls}" data-vai="${vaiId}" data-cat="${b.cat.id}" ${dataAttrs}>${esc(d.label)}</button>`;
   }).join('');
+
+  // Transizione soft per le sottocategorie: entrano con .sub-enter (collassate),
+  // poi dopo un frame la classe viene rimossa e la transizione CSS le fa apparire
+  if (document.body.classList.contains('cat-left')) {
+    const subs = strip.querySelectorAll('button.sub-cat');
+    subs.forEach(b => b.classList.add('sub-enter'));
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        subs.forEach(b => b.classList.remove('sub-enter'));
+      });
+    });
+  }
 
   // Click handlers
   document.querySelectorAll('#tabs-cat button[data-cat]').forEach(btn => {
